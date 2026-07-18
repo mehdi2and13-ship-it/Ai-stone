@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Stone</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#171410">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Stone">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Vazirmatn', sans-serif; background: #0e0c0a;
+    display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px;
+  }
+  .price-mono { font-family: 'JetBrains Mono', monospace; }
+  #phone {
+    width: 100%; max-width: 380px; height: 800px; background: #171410;
+    border: 8px solid #000; border-radius: 2.2rem; overflow: hidden; position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column;
+  }
+  #statusbar { height: 28px; background: #000; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  #statusbar .dot { width: 64px; height: 10px; background: #2a2620; border-radius: 999px; }
+  #topbar { background: #171410; color: #EDE6D8; padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 8px; border-bottom: 1px solid #2a2620; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 999px; background: #221E18; border: 1px solid #332c22; display: flex; align-items: center; justify-content: center; color: #EDE6D8; cursor: pointer; flex-shrink: 0; }
+  .icon-btn.active { background: #C97D4A; border-color: #C97D4A; color: #171410; }
+  #bodyArea { flex: 1; overflow-y: auto; padding: 18px 16px; background: #171410; }
+  #bottomnav { height: 72px; background: #100E0B; border-top: 1px solid #2a2620; display: flex; align-items: center; justify-content: space-around; padding: 0 24px; flex-shrink: 0; }
+  .navbtn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: #6f6558; cursor: pointer; font-family: inherit; }
+  .navbtn.active { color: #C97D4A; }
+  .navbtn span { font-size: 10px; }
+  #addBtn { width: 50px; height: 50px; border-radius: 999px; background: #C97D4A; border: none; display: flex; align-items: center; justify-content: center; margin-top: -26px; box-shadow: 0 8px 20px rgba(201,125,74,0.45); cursor: pointer; }
+
+  .eyebrow { font-size: 10px; letter-spacing: .22em; color: #C97D4A; font-weight: 700; }
+
+  /* voice hero */
+  .voice-hero { display: flex; flex-direction: column; align-items: center; padding: 18px 0 8px; }
+  .rings { position: relative; width: 128px; height: 128px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .ring { position: absolute; border-radius: 50%; border: 1px solid rgba(201,125,74,0.35); }
+  .ring.r1 { width: 128px; height: 128px; }
+  .ring.r2 { width: 100px; height: 100px; border-color: rgba(201,125,74,0.5); }
+  .ring.r3 { width: 72px; height: 72px; border-color: rgba(201,125,74,0.7); }
+  .ring.pulse { animation: pulse 2.6s ease-out infinite; }
+  @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.9; } 100% { transform: scale(1.35); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .ring.pulse { animation: none; } }
+  #micBtn { position: relative; z-index: 2; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(160deg,#C97D4A,#A3612F); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 18px rgba(201,125,74,0.4); }
+  #micBtn.listening { box-shadow: 0 0 0 6px rgba(201,125,74,0.25); }
+  .voice-hint { font-size: 11px; color: #857a69; margin-top: 2px; }
+
+  .text-search { width: 100%; background: #221E18; border: 1px solid #332c22; border-radius: 14px; display: flex; align-items: center; padding: 10px 14px; gap: 8px; margin: 14px 0 16px; }
+  .text-search input { background: transparent; border: none; outline: none; color: #EDE6D8; font-family: inherit; font-size: 13px; flex: 1; }
+  .text-search input::placeholder { color: #6f6558; }
+
+  .stats-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .stat-chip { flex: 1; background: #1E1A15; border: 1px solid #2a2620; border-radius: 14px; padding: 10px; text-align: center; }
+  .stat-chip .n { font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; color: #C97D4A; }
+  .stat-chip .l { font-size: 9.5px; color: #857a69; margin-top: 2px; }
+
+  .section-label { font-size: 11.5px; color: #857a69; font-weight: 600; margin: 4px 0 10px; display: flex; align-items: center; justify-content: space-between; }
+
+  .card { width: 100%; background: #1E1A15; border: 1px solid #2a2620; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 12px; border: none; text-align: right; cursor: pointer; margin-bottom: 10px; font-family: inherit; }
+  .card:active { transform: scale(0.98); }
+  .swatch { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .grow { flex: 1; min-width: 0; }
+  .title-sm { font-weight: 600; color: #EDE6D8; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub-sm { font-size: 11px; color: #857a69; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 11px; background: rgba(201,125,74,0.15); color: #C97D4A; border-radius: 999px; padding: 4px 8px; font-weight: 600; flex-shrink: 0; }
+  .empty { text-align: center; margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #857a69; }
+  .empty .ic { width: 56px; height: 56px; border-radius: 16px; background: #1E1A15; border: 1px solid #2a2620; display: flex; align-items: center; justify-content: center; }
+  .empty .t { font-weight: 600; color: #EDE6D8; font-size: 13px; margin-top: 4px; }
+  .empty .d { font-size: 12px; max-width: 220px; }
+
+  .prodrow { background: #1E1A15; border: 1px solid #2a2620; border-radius: 16px; padding: 12px; display: flex; gap: 12px; margin-bottom: 10px; }
+  .prodrow.inactive { opacity: 0.45; }
+  .thumb { width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0; overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .price-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .price-val { font-size: 14px; font-weight: 700; color: #C97D4A; }
+  .unit-lbl { font-size: 10px; color: #857a69; }
+  .check-lbl { font-size: 11px; color: #8FB39A; font-weight: 600; margin-top: 2px; }
+  .hist-link { font-size: 10px; color: #8FB39A; display: flex; align-items: center; gap: 2px; margin-right: auto; background: none; border: none; cursor: pointer; font-family: inherit; }
+  .actions-col { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .mini-btn { width: 28px; height: 28px; border-radius: 8px; background: #262119; border: 1px solid #332c22; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+  .toggle-link { font-size: 11px; color: #857a69; display: flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer; font-family: inherit; }
+  .factory-toprow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .call-link { font-size: 11px; color: #C97D4A; font-weight: 600; display: flex; align-items: center; gap: 4px; text-decoration: none; }
+
+  #searchBox { flex: 1; background: #221E18; border: 1px solid #332c22; border-radius: 12px; display: flex; align-items: center; padding: 8px 12px; gap: 8px; }
+  #searchInput { background: transparent; border: none; outline: none; color: #EDE6D8; font-family: inherit; font-size: 13px; flex: 1; }
+  #searchInput::placeholder { color: #6f6558; }
+
+  .filter-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-chip { font-size: 11px; background: #1E1A15; border: 1px solid #2a2620; color: #857a69; padding: 6px 12px; border-radius: 999px; cursor: pointer; font-family: inherit; }
+  .filter-chip.active { background: #C97D4A; border-color: #C97D4A; color: #171410; font-weight: 600; }
+
+  #modalRoot { position: absolute; inset: 0; z-index: 30; display: none; }
+  .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: flex-end; }
+  .modal-sheet { background: #1E1A15; border-top: 1px solid #332c22; width: 100%; border-radius: 24px 24px 0 0; padding: 20px; max-height: 92%; overflow-y: auto; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-head .t { font-weight: 700; color: #EDE6D8; }
+  .modal-head button { background: none; border: none; cursor: pointer; color: #EDE6D8; }
+  .field { margin-bottom: 12px; }
+  .field label { font-size: 11px; color: #857a69; display: block; margin-bottom: 4px; }
+  .field input, .field textarea, .field select { width: 100%; background: #262119; border: 1px solid #332c22; color: #EDE6D8; border-radius: 12px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; resize: none; }
+  .field input::placeholder, .field textarea::placeholder { color: #6f6558; }
+  .field input:focus, .field textarea:focus, .field select:focus { box-shadow: 0 0 0 2px rgba(201,125,74,0.4); }
+  .attr-filter-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .row2 { display: flex; gap: 8px; align-items: flex-end; }
+  .row2 > .field { flex: 1; }
+  .save-btn { width: 100%; background: #C97D4A; color: #171410; border: none; border-radius: 12px; padding: 13px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; margin-top: 4px; }
+  .save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .photo-drop { width: 100%; height: 112px; border-radius: 16px; border: 2px dashed #332c22; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 12px; cursor: pointer; position: relative; color: #857a69; }
+  .photo-drop img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+  .photo-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  #toast { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); background: #C97D4A; color: #171410; font-size: 12px; font-weight: 600; padding: 9px 16px; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); display: none; z-index: 40; }
+
+  .hist-cur { display: flex; align-items: center; justify-content: space-between; background: rgba(201,125,74,0.15); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+  .hist-old { display: flex; align-items: center; justify-content: space-between; background: #262119; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .chip { border: 1px solid #332c22; background: #262119; color: #EDE6D8; font-family: inherit; font-size: 11.5px; padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+  .chip.selected { background: #C97D4A; border-color: #C97D4A; color: #171410; }
+  .custom-chip-input { width: 100%; background: #262119; color: #EDE6D8; border: 1px dashed #332c22; border-radius: 999px; padding: 7px 12px; font-size: 11.5px; font-family: inherit; outline: none; margin-bottom: 2px; }
+  .custom-chip-input::placeholder { color: #6f6558; }
+  .custom-chip-input:focus { box-shadow: 0 0 0 2px rgba(201,125,74,0.3); }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+  .tag-pill { font-size: 9.5px; background: #262119; color: #857a69; border: 1px solid #332c22; border-radius: 999px; padding: 2px 7px; }
+  .entry-card { border: 1px solid #2a2620; border-radius: 16px; padding: 14px; margin-bottom: 14px; background: #1a1712; }
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="statusbar"><div class="dot"></div></div>
+  <div id="topbar"></div>
+  <div id="bodyArea"></div>
+  <div id="bottomnav"></div>
+  <div id="modalRoot"></div>
+  <div id="toast"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ---------- Firestore config & collection names ----------
+const COL_FACTORIES = 'factories';
+const COL_PRODUCTS = 'products';
+const firebaseConfig = {
+  apiKey: "AIzaSyC4_bJsF23BwxVSI3ChKr1tpZr-bn56_1o",
+  authDomain: "ai-stone-5eb7f.firebaseapp.com",
+  projectId: "ai-stone-5eb7f",
+  storageBucket: "ai-stone-5eb7f.firebasestorage.app",
+  messagingSenderId: "585895645803",
+  appId: "1:585895645803:web:9555a0b182e4b2b5db172e"
+};
+let db = null;
+let factoriesLoadedOnce = false;
+let productsLoadedOnce = false;
+
+// ---------- state ----------
+let factories = [];
+let products = [];
+let loaded = false;
+let view = 'home';
+let activeFactoryId = null;
+let showInactive = false;
+let searchQuery = '';
+let listening = false;
+let sortMode = 'newest'; // newest | cheapest | alpha
+let showPriceFilter = false;
+let priceMin = '';
+let priceMax = '';
+let showAttrFilter = false;
+let filterStoneType = '';
+let filterColor = '';
+let filterPattern = '';
+let filterSort = '';
+let filterProcess = '';
+let filterDimType = '';
+
+let factoryModalData = null;
+let productModalData = null;
+let historyModalProduct = null;
+
+let productEntries = []; // هر آیتم: عکس + مشخصات مخصوص به خودش
+const STONE_TYPE_OPTIONS = ['تراورتن', 'مرمریت', 'ترامیت', 'لایمستون', 'گرانیت', 'چینی'];
+const COLOR_OPTIONS = ['سفید', 'کرم', 'عسلی', 'شکلاتی', 'نسکافه‌ای', 'مشکی', 'طوسی', 'سبز'];
+const PATTERN_OPTIONS = ['بی‌موج', 'موج‌دار', 'بی‌دنده', 'خط‌دار', 'بی‌خط', 'ابر و بادی', 'رگه‌دار'];
+const SORT_OPTIONS = ['سوپر', 'ممتاز', 'درجه یک', 'درجه دو', 'پشت‌کاری'];
+const PROCESS_OPTIONS = ['سابیده', 'چرمی', 'پولیش', 'تیشه‌ای', 'بوشهامر', 'خام'];
+const DIM_TYPES = ['تایل', 'اسلب', 'سنگ پله', 'سنگ فرشی', 'صادراتی', 'صراحی'];
+const TILE_WIDTHS = ['30', '40', '60'];
+const THICKNESS_OPTIONS = ['1.6', '1.7', '1.8', '2', '3'];
+const SPOUT_SHAPES = ['گرد', 'چهارگوش'];
+
+// ---------- helpers ----------
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const fmtDate = (iso) => { try { return new Date(iso).toLocaleDateString('fa-IR', { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return iso; } };
+const fmtNum = (n) => Number(n || 0).toLocaleString('en-US');
+const esc = (s) => (s === null || s === undefined ? '' : String(s)).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+function formatThousands(value) {
+  const digits = String(value === null || value === undefined ? '' : value).replace(/[^\d]/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('en-US').replace(/,/g, '.');
+}
+
+function attachPriceFormatting(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const digits = el.value.replace(/[^\d]/g, '');
+    el.value = digits ? Number(digits).toLocaleString('en-US').replace(/,/g, '.') : '';
+  });
+}
+
+function isPriceExpired(p) {
+  const days = Number(p.priceValidityDays);
+  if (!days) return false;
+  const base = new Date(p.lastPriceDate);
+  base.setDate(base.getDate() + days);
+  return new Date() > base;
+}
+
+function chipGroupHTML(field, options, selected, entryId) {
+  const isCustom = selected && !options.includes(selected);
+  const chips = options.map(o => `<button type="button" class="chip ${o === selected ? 'selected' : ''}" data-action="selectChip" data-field="${field}" data-value="${esc(o)}" data-entry="${entryId}">${esc(o)}</button>`).join('');
+  return `<div class="chip-row" id="${field}Chips_${entryId}">${chips}</div>
+    <input class="custom-chip-input" id="p_custom_${field}_${entryId}" placeholder="یا مورد جدید بنویس..." value="${isCustom ? esc(selected) : ''}">`;
+}
+
+function renderDimDetail(entryId, dimType, existing) {
+  const el = document.getElementById('dimDetail_' + entryId);
+  if (!el) return;
+  existing = existing || {};
+  if (!dimType) {
+    el.innerHTML = `<div style="font-size:11px;color:#857a69;margin-top:2px;">یک نوع رو انتخاب کن</div>`;
+    return;
+  }
+  if (dimType === 'صراحی') {
+    el.innerHTML = `
+      <div class="field" style="margin-top:8px;"><label>طول (سانتی‌متر)</label><input id="dim_spoutLength_${entryId}" type="number" value="${esc(existing.spoutLength || '')}" placeholder="مثلاً 90"></div>
+      <div style="font-size:10.5px;color:#857a69;margin-bottom:4px;">گرد یا چهارگوش</div>
+      <div class="chip-row" id="spoutShapeChips_${entryId}">${SPOUT_SHAPES.map(s => `<button type="button" class="chip ${s === existing.spoutShape ? 'selected' : ''}" data-action="selectSpoutShape" data-value="${esc(s)}" data-entry="${entryId}">${esc(s)}</button>`).join('')}</div>`;
+    return;
+  }
+  let html = '';
+  if (dimType === 'تایل') {
+    html += `<div style="font-size:10.5px;color:#857a69;margin:6px 0 4px;">عرض (سانتی‌متر) — طول آزاد است</div>
+      ${chipGroupHTML('width', TILE_WIDTHS, existing.width, entryId)}`;
+  } else {
+    html += `<div class="row2" style="margin-top:6px;">
+      <div class="field" style="margin-bottom:0;"><label>عرض (سانتی‌متر)</label><input id="dim_width_input_${entryId}" type="number" value="${esc(existing.width || '')}" placeholder="مثلاً 90"></div>
+      <div class="field" style="margin-bottom:0;"><label>طول (سانتی‌متر)</label><input id="dim_length_input_${entryId}" type="number" value="${esc(existing.length || '')}" placeholder="مثلاً 200"></div>
+    </div>`;
+  }
+  html += `<div style="font-size:10.5px;color:#857a69;margin:10px 0 4px;">ضخامت (سانتی‌متر)</div>
+    ${chipGroupHTML('thickness', THICKNESS_OPTIONS, existing.thickness, entryId)}`;
+  el.innerHTML = html;
+
+  if (dimType === 'تایل') {
+    const input = document.getElementById('p_custom_width_' + entryId);
+    if (input) input.addEventListener('input', () => {
+      document.getElementById('widthChips_' + entryId).querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      const entry = productEntries.find(e => e.localId === entryId);
+      if (entry) entry.width = null;
+    });
+  }
+  const thicknessInput = document.getElementById('p_custom_thickness_' + entryId);
+  if (thicknessInput) thicknessInput.addEventListener('input', () => {
+    document.getElementById('thicknessChips_' + entryId).querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+    const entry = productEntries.find(e => e.localId === entryId);
+    if (entry) entry.thickness = null;
+  });
+}
+
+function swatchFor(name) {
+  name = name || '';
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  const hues = [[28,45,42],[150,20,32],[20,45,38],[40,35,45],[200,15,38]];
+  const [h,s,l] = hues[hash % hues.length];
+  const h2 = (h + 18 + (hash % 20)) % 360;
+  return `linear-gradient(135deg, hsl(${h} ${s}% ${l}%) 0%, hsl(${h2} ${s+10}% ${l+10}%) 100%)`;
+}
+
+function icon(name, size = 18, color = 'currentColor') {
+  const s = size, c = color, sw = 2;
+  const wrap = (inner) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  switch (name) {
+    case 'home': return wrap(`<path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/>`);
+    case 'search': return wrap(`<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/>`);
+    case 'plus': return wrap(`<path d="M12 5v14M5 12h14"/>`);
+    case 'x': return wrap(`<path d="M5 5l14 14M19 5L5 19"/>`);
+    case 'arrowRight': return wrap(`<path d="M5 12h14M13 6l6 6-6 6"/>`);
+    case 'chevronLeft': return wrap(`<path d="M15 6l-6 6 6 6"/>`);
+    case 'phone': return wrap(`<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2C9.5 21 3 14.5 3 6a2 2 0 0 1 2-2z"/>`);
+    case 'mapPin': return wrap(`<circle cx="12" cy="10" r="3"/><path d="M12 21s7-6.4 7-11a7 7 0 0 0-14 0c0 4.6 7 11 7 11z"/>`);
+    case 'package': return wrap(`<rect x="4" y="8" width="16" height="12" rx="1.5"/><path d="M4 8l8-4 8 4M12 4v16"/>`);
+    case 'mic': return wrap(`<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>`);
+    case 'edit': return wrap(`<path d="M4 20h4l10-10-4-4L4 16v4z"/>`);
+    case 'eyeOff': return wrap(`<path d="M3 3l18 18"/><path d="M10.6 5.2A10.4 10.4 0 0 1 12 5c5 0 9 4 10 7-.5 1.4-1.4 2.9-2.7 4.1M6.6 6.6C4.6 8 3.3 9.8 2 12c1 3 5 7 10 7 1.4 0 2.7-.3 3.9-.8"/><circle cx="12" cy="12" r="3"/>`);
+    case 'eye': return wrap(`<path d="M2 12c1-3 5-7 10-7s9 4 10 7c-1 3-5 7-10 7s-9-4-10-7z"/><circle cx="12" cy="12" r="3"/>`);
+    case 'camera': return wrap(`<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l1.5-3h5L16 7"/><circle cx="12" cy="13.5" r="3.5"/>`);
+    case 'history': return wrap(`<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M5 5l2 1"/>`);
+    case 'check': return wrap(`<path d="M5 12l5 5L20 6"/>`);
+    case 'factory': return wrap(`<path d="M4 20V11l5 3v-3l5 3V8l6 3v9H4z"/>`);
+    case 'alert': return wrap(`<path d="M12 3l9 17H3z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/>`);
+    default: return '';
+  }
+}
+
+// ---------- storage (Firebase Firestore, real-time sync) ----------
+function loadData() {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  } catch (e) { showToast('اتصال به دیتابیس ناموفق بود'); return; }
+
+  db.collection(COL_FACTORIES).onSnapshot((snap) => {
+    factories = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    factoriesLoadedOnce = true;
+    if (productsLoadedOnce) loaded = true;
+    render();
+  }, (err) => { showToast('خطا در دریافت اطلاعات کارخانه‌ها'); });
+
+  db.collection(COL_PRODUCTS).onSnapshot((snap) => {
+    products = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+    productsLoadedOnce = true;
+    if (factoriesLoadedOnce) loaded = true;
+    render();
+  }, (err) => { showToast('خطا در دریافت اطلاعات محصولات'); });
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2200);
+}
+
+// ---------- data ops ----------
+function saveFactory(data) {
+  const payload = {
+    name: data.name, location: data.location||'', phone: data.phone||'',
+    contactName: data.contactName||'', contactTitle: data.contactTitle||'', notes: data.notes||''
+  };
+  if (data.id) {
+    db.collection(COL_FACTORIES).doc(data.id).update(payload)
+      .then(() => showToast('کارخانه به‌روزرسانی شد'))
+      .catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+  } else {
+    payload.createdAt = todayISO();
+    db.collection(COL_FACTORIES).add(payload)
+      .then(() => showToast('کارخانه اضافه شد'))
+      .catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+  }
+  closeModal();
+}
+
+function saveProductSingle(data) {
+  if (data.id) {
+    const existing = products.find(p => p.id === data.id) || {};
+    const priceChanged = Number(data.priceCash) !== Number(existing.priceCash) || Number(data.priceCheck || 0) !== Number(existing.priceCheck || 0);
+    const priceHistory = existing.priceHistory || [];
+    const newHistory = priceChanged ? [...priceHistory, { priceCash: existing.priceCash || 0, priceCheck: existing.priceCheck || '', checkMonths: existing.checkMonths || '', date: existing.lastPriceDate || existing.createdAt }] : priceHistory;
+    const payload = Object.assign({}, data, { priceHistory: newHistory, lastPriceDate: priceChanged ? todayISO() : existing.lastPriceDate });
+    delete payload.id;
+    db.collection(COL_PRODUCTS).doc(data.id).update(payload).catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+  } else {
+    const payload = {
+      factoryId: data.factoryId, name: data.name, stoneType: data.stoneType||'',
+      color: data.color||'', pattern: data.pattern||'', processType: data.processType||'',
+      sort: data.sort||'', qadopa: data.qadopa||'',
+      dimensionType: data.dimensionType||'', width: data.width||'', length: data.length||'', thickness: data.thickness||'',
+      spoutLength: data.spoutLength||'', spoutShape: data.spoutShape||'',
+      unit: data.unit||'م.م', priceCash: data.priceCash||0, priceCheck: data.priceCheck||'', checkMonths: data.checkMonths||'',
+      priceValidityDays: data.priceValidityDays||'',
+      photo: data.photo||null, notes: data.notes||'',
+      active: true, createdAt: todayISO(), lastPriceDate: todayISO(), priceHistory: []
+    };
+    db.collection(COL_PRODUCTS).add(payload).catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+  }
+}
+
+function toggleActive(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  db.collection(COL_PRODUCTS).doc(id).update({ active: !p.active }).catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+}
+
+function handlePhotoFile(file, cb) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 480;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      cb(canvas.toDataURL('image/jpeg', 0.6));
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function startVoice(targetInputId) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('جستجوی صوتی پشتیبانی نمی‌شود'); return; }
+  const rec = new SR();
+  rec.lang = 'fa-IR';
+  rec.onstart = () => { listening = true; render(); };
+  rec.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    if (targetInputId === 'searchInput') { searchQuery = text; view = 'search'; render(); }
+    else { const el = document.getElementById(targetInputId); if (el) { el.value = text; el.dispatchEvent(new Event('input')); } }
+  };
+  rec.onerror = () => { listening = false; render(); };
+  rec.onend = () => { listening = false; render(); };
+  rec.start();
+}
+
+// ---------- render: topbar ----------
+function renderTopbar() {
+  const el = document.getElementById('topbar');
+  if (view === 'home') {
+    el.innerHTML = `
+      <div>
+        <div class="eyebrow">CAPITAL STONE</div>
+        <div style="font-size:18px;font-weight:700;color:#EDE6D8;">AI Stone</div>
+      </div>
+      <button class="icon-btn" data-action="goSearch">${icon('search',17)}</button>
+    `;
+  } else if (view === 'recent') {
+    el.innerHTML = `
+      <button class="icon-btn" data-action="goHome">${icon('arrowRight',17)}</button>
+      <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#EDE6D8;">آخرین قیمت‌ها</div>
+      <span style="width:36px;flex-shrink:0;"></span>
+    `;
+  } else if (view === 'factories') {
+    el.innerHTML = `
+      <button class="icon-btn" data-action="goHome">${icon('arrowRight',17)}</button>
+      <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#EDE6D8;">کارخانه‌ها</div>
+      <button class="icon-btn" data-action="openAdd">${icon('plus',17)}</button>
+    `;
+  } else if (view === 'factory') {
+    const f = factories.find(x => x.id === activeFactoryId) || {};
+    el.innerHTML = `
+      <button class="icon-btn" data-action="goFactories">${icon('arrowRight',17)}</button>
+      <div style="flex:1;text-align:center;padding:0 8px;overflow:hidden;">
+        <div style="font-size:14px;font-weight:700;color:#EDE6D8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.name)}</div>
+        <div style="font-size:10px;color:#857a69;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.location)}</div>
+      </div>
+      <button class="icon-btn" data-action="editFactory">${icon('edit',15)}</button>
+    `;
+  } else if (view === 'search') {
+    el.innerHTML = `
+      <button class="icon-btn" data-action="goHome">${icon('arrowRight',17)}</button>
+      <div id="searchBox">
+        <input id="searchInput" placeholder="نام سنگ، کارخانه یا منطقه..." value="${esc(searchQuery)}" />
+      </div>
+      <button class="icon-btn ${listening ? 'active' : ''}" data-action="voiceSearch">${icon('mic',16)}</button>
+    `;
+    const input = document.getElementById('searchInput');
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.addEventListener('input', (e) => { searchQuery = e.target.value; renderBody(); });
+  }
+}
+
+// ---------- render: body ----------
+function renderBody() {
+  const el = document.getElementById('bodyArea');
+  if (!loaded) { el.innerHTML = `<div style="text-align:center;color:#857a69;font-size:13px;margin-top:40px;">در حال بارگذاری...</div>`; return; }
+
+  if (view === 'home') {
+    const activeProducts = products.filter(p => p.active);
+    const lastUpdate = products.length ? products.reduce((a,b) => a.lastPriceDate > b.lastPriceDate ? a : b).lastPriceDate : null;
+
+    let html = `
+      <div class="voice-hero">
+        <div class="rings">
+          <div class="ring r1 pulse"></div>
+          <div class="ring r2 pulse" style="animation-delay:.4s"></div>
+          <div class="ring r3"></div>
+          <button id="micBtn" class="${listening ? 'listening' : ''}" data-action="voiceHome">${icon('mic',24,'#171410')}</button>
+        </div>
+        <div class="voice-hint">بگو دنبال چه سنگی می‌گردی</div>
+      </div>
+      <div class="text-search">
+        ${icon('search',15,'#6f6558')}
+        <input id="homeSearchInput" placeholder="یا تایپ کن..." value="">
+      </div>
+      <div class="stats-row">
+        <div class="stat-chip"><div class="n price-mono">${factories.length}</div><div class="l">کارخانه</div></div>
+        <div class="stat-chip"><div class="n price-mono">${activeProducts.length}</div><div class="l">محصول فعال</div></div>
+        <div class="stat-chip"><div class="n" style="font-size:11px;">${lastUpdate ? fmtDate(lastUpdate) : '—'}</div><div class="l">آخرین به‌روزرسانی</div></div>
+      </div>
+      <button class="card" style="padding:18px;margin-bottom:12px;" data-action="goRecent">
+        <div class="swatch" style="width:52px;height:52px;background:linear-gradient(135deg,#C97D4A,#A3612F);">${icon('history',22,'#171410')}</div>
+        <div class="grow">
+          <div class="title-sm" style="font-size:14px;">آخرین قیمت‌ها</div>
+          <div class="sub-sm">${activeProducts.length} محصول ثبت‌شده</div>
+        </div>
+        ${icon('chevronLeft',18,'#6f6558')}
+      </button>
+      <button class="card" style="padding:18px;" data-action="goFactories">
+        <div class="swatch" style="width:52px;height:52px;background:linear-gradient(135deg,#8a7657,#5c4e3a);">${icon('factory',22,'#EDE6D8')}</div>
+        <div class="grow">
+          <div class="title-sm" style="font-size:14px;">کارخانه‌ها</div>
+          <div class="sub-sm">${factories.length} کارخانه ثبت‌شده</div>
+        </div>
+        ${icon('chevronLeft',18,'#6f6558')}
+      </button>
+    `;
+    el.innerHTML = html;
+    document.getElementById('homeSearchInput').addEventListener('focus', () => { view = 'search'; render(); });
+  }
+
+  else if (view === 'recent') {
+    const activeProducts = products.filter(p => p.active).sort((a,b) => b.lastPriceDate.localeCompare(a.lastPriceDate));
+    if (activeProducts.length === 0) {
+      el.innerHTML = emptyState('history', 'هنوز قیمتی ثبت نشده', 'بعد از ثبت محصول، آخرین قیمت‌ها اینجا نمایش داده می‌شود.');
+    } else {
+      el.innerHTML = activeProducts.map(p => {
+        const f = factories.find(x => x.id === p.factoryId);
+        return `<button class="card" data-action="openFactoryFromSearch" data-id="${p.factoryId}">
+          <div class="thumb swatch" style="${p.photo ? '' : `background:${swatchFor(p.stoneType||p.name)}`}">${p.photo ? `<img src="${p.photo}">` : ''}</div>
+          <div class="grow">
+            <div class="title-sm">${esc(p.name)}</div>
+            <div class="sub-sm">${esc(f ? f.name : '')}</div>
+          </div>
+          <div class="price-mono price-val" style="font-size:12px;">${fmtNum(p.priceCash)}</div>
+        </button>`;
+      }).join('');
+    }
+  }
+
+  else if (view === 'factories') {
+    if (factories.length === 0) {
+      el.innerHTML = emptyState('factory', 'هنوز کارخانه‌ای ثبت نشده', 'با دکمهٔ + یک کارخانه اضافه کن تا محصولاتش رو ثبت کنی.');
+    } else {
+      el.innerHTML = factories.map(f => {
+        const count = products.filter(p => p.factoryId === f.id && p.active).length;
+        return `
+          <button class="card" data-action="openFactory" data-id="${f.id}">
+            <div class="swatch" style="background:${swatchFor(f.name)}">${icon('factory',18,'rgba(255,255,255,0.9)')}</div>
+            <div class="grow">
+              <div class="title-sm">${esc(f.name)}</div>
+              <div class="sub-sm">${icon('mapPin',11)} ${esc(f.location) || 'بدون آدرس'}</div>
+            </div>
+            <div class="badge price-mono">${count}</div>
+            ${icon('chevronLeft',16,'#6f6558')}
+          </button>`;
+      }).join('');
+    }
+  }
+
+  else if (view === 'factory') {
+    const list = products.filter(p => p.factoryId === activeFactoryId).filter(p => showInactive || p.active);
+    const f = factories.find(x => x.id === activeFactoryId) || {};
+    let html = `<div class="factory-toprow">
+      <button class="toggle-link" data-action="toggleInactive">${icon(showInactive ? 'eye' : 'eyeOff', 13)} ${showInactive ? 'نمایش غیرفعال‌ها' : 'فقط فعال‌ها'}</button>
+      ${f.phone ? `<a class="call-link" href="tel:${esc(f.phone)}">${icon('phone',12)} ${esc(f.phone)}${f.contactName ? ' · ' + esc(f.contactName) : ''}${f.contactTitle ? ' (' + esc(f.contactTitle) + ')' : ''}</a>` : '<span></span>'}
+    </div>`;
+    if (list.length === 0) {
+      html += emptyState('package', 'محصولی ثبت نشده', 'با دکمهٔ + یک محصول با عکس و قیمت اضافه کن.');
+    } else {
+      html += list.map(p => {
+        const dimTag = p.dimensionType === 'تایل' ? `عرض ${esc(p.width)} (طول آزاد)`
+          : p.dimensionType === 'صراحی' ? `طول ${esc(p.spoutLength)} · ${esc(p.spoutShape)}`
+          : `${esc(p.width)}×${esc(p.length)}`;
+        return `
+        <div class="prodrow ${!p.active ? 'inactive' : ''}">
+          <div class="thumb" style="${p.photo ? '' : `background:${swatchFor(p.stoneType||p.name)}`}">${p.photo ? `<img src="${p.photo}">` : ''}</div>
+          <div class="grow">
+            <div class="title-sm">${esc(p.name)}</div>
+            <div class="sub-sm">${esc(p.stoneType)}</div>
+            ${(p.color || p.pattern || p.processType || p.sort || p.dimensionType || p.thickness || p.qadopa) ? `<div class="tag-row">
+              ${[p.color,p.pattern,p.processType,p.sort].filter(Boolean).map(x => `<span class="tag-pill">${esc(x)}</span>`).join('')}
+              ${p.qadopa ? `<span class="tag-pill">قد و پا: ${esc(p.qadopa)}</span>` : ''}
+              ${p.dimensionType ? `<span class="tag-pill">${esc(p.dimensionType)} · ${dimTag}</span>` : ''}
+              ${p.thickness ? `<span class="tag-pill">ضخامت ${esc(p.thickness)}</span>` : ''}
+            </div>` : ''}
+            <div class="price-row">
+              <span class="price-mono price-val">${fmtNum(p.priceCash)}</span>
+              <span class="unit-lbl">تومان / ${esc(p.unit)}</span>
+              <span class="unit-lbl">· ${fmtDate(p.lastPriceDate)}</span>
+              ${isPriceExpired(p) ? `<span title="اعتبار قیمت تمام شده">${icon('alert',13,'#D08C74')}</span>` : ''}
+              ${p.priceHistory && p.priceHistory.length > 0 ? `<button class="hist-link" data-action="showHistory" data-id="${p.id}">${icon('history',11)} تاریخچه</button>` : ''}
+            </div>
+            ${p.priceCheck ? `<div class="check-lbl">چک${p.checkMonths ? ' ' + esc(p.checkMonths) + ' ماهه' : ''}: ${fmtNum(p.priceCheck)} تومان</div>` : ''}
+          </div>
+          <div class="actions-col">
+            <button class="mini-btn" data-action="editProduct" data-id="${p.id}">${icon('edit',12,'#EDE6D8')}</button>
+            <button class="mini-btn" data-action="toggleActive" data-id="${p.id}">${p.active ? icon('eyeOff',12,'#D08C74') : icon('check',12,'#8FB39A')}</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    el.innerHTML = html;
+  }
+
+  else if (view === 'search') {
+    const filterRowHTML = `<div class="filter-row">
+      <button class="filter-chip ${sortMode==='newest'?'active':''}" data-action="setSort" data-sort="newest">جدیدترین</button>
+      <button class="filter-chip ${sortMode==='cheapest'?'active':''}" data-action="setSort" data-sort="cheapest">ارزان‌ترین</button>
+      <button class="filter-chip ${sortMode==='alpha'?'active':''}" data-action="setSort" data-sort="alpha">الفبا</button>
+      <button class="filter-chip ${showPriceFilter?'active':''}" data-action="togglePriceFilter">بازه قیمت</button>
+      <button class="filter-chip ${showAttrFilter?'active':''}" data-action="toggleAttrFilter">فیلترهای دقیق</button>
+    </div>` + (showPriceFilter ? `<div class="row2" style="margin-bottom:12px;">
+      <div class="field" style="margin-bottom:0;"><label>حداقل قیمت (تومان)</label><input id="priceMinInput" value="${formatThousands(priceMin)}" inputmode="numeric" placeholder="مثلاً 1.000.000"></div>
+      <div class="field" style="margin-bottom:0;"><label>حداکثر قیمت (تومان)</label><input id="priceMaxInput" value="${formatThousands(priceMax)}" inputmode="numeric" placeholder="مثلاً 1.500.000"></div>
+    </div>` : '') + (showAttrFilter ? attrFilterHTML() : '');
+    el.innerHTML = filterRowHTML + `<div id="searchResultsWrap"></div>`;
+    if (showPriceFilter) {
+      const minEl = document.getElementById('priceMinInput');
+      const maxEl = document.getElementById('priceMaxInput');
+      attachPriceFormatting('priceMinInput');
+      attachPriceFormatting('priceMaxInput');
+      if (minEl) minEl.addEventListener('input', (e) => { priceMin = e.target.value.replace(/\./g, ''); renderSearchResultsOnly(); });
+      if (maxEl) maxEl.addEventListener('input', (e) => { priceMax = e.target.value.replace(/\./g, ''); renderSearchResultsOnly(); });
+    }
+    if (showAttrFilter) {
+      [['attrStoneType','stoneType'],['attrColor','color'],['attrPattern','pattern'],['attrSort','sort'],['attrProcess','process'],['attrDimType','dimType']].forEach(([elId, key]) => {
+        const sel = document.getElementById(elId);
+        if (sel) sel.addEventListener('change', (e) => {
+          if (key === 'stoneType') filterStoneType = e.target.value;
+          else if (key === 'color') filterColor = e.target.value;
+          else if (key === 'pattern') filterPattern = e.target.value;
+          else if (key === 'sort') filterSort = e.target.value;
+          else if (key === 'process') filterProcess = e.target.value;
+          else if (key === 'dimType') filterDimType = e.target.value;
+          renderSearchResultsOnly();
+        });
+      });
+    }
+    renderSearchResultsOnly();
+  }
+}
+
+function distinctValues(field) {
+  const vals = products.map(p => p[field]).filter(Boolean);
+  return Array.from(new Set(vals));
+}
+
+function attrFilterHTML() {
+  const selectRow = (id, label, options, selected) => `
+    <div class="field" style="margin-bottom:0;">
+      <label>${label}</label>
+      <select id="${id}">
+        <option value="">همه</option>
+        ${options.map(o => `<option value="${esc(o)}" ${o === selected ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+      </select>
+    </div>`;
+  return `<div class="attr-filter-wrap">
+    <div class="row2">${selectRow('attrStoneType','نوع سنگ', distinctValues('stoneType'), filterStoneType)}${selectRow('attrColor','رنگ', distinctValues('color'), filterColor)}</div>
+    <div class="row2">${selectRow('attrPattern','طرح سنگ', distinctValues('pattern'), filterPattern)}${selectRow('attrSort','سورت سنگ', distinctValues('sort'), filterSort)}</div>
+    <div class="row2">${selectRow('attrProcess','نوع فرآوری', distinctValues('processType'), filterProcess)}${selectRow('attrDimType','ابعاد و نوع محصول', DIM_TYPES, filterDimType)}</div>
+  </div>`;
+}
+
+function productSearchText(p, f) {
+  return [p.name, p.stoneType, p.color, p.pattern, p.sort, p.processType, p.dimensionType, p.qadopa, p.unit, p.notes,
+    f ? f.name : '', f ? f.location : '', f ? f.contactName : '', f ? f.contactTitle : '']
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
+function renderSearchResultsOnly() {
+  const wrap = document.getElementById('searchResultsWrap');
+  if (!wrap) return;
+  const q = searchQuery.trim().toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+  let results = products.map(p => ({ p, f: factories.find(f => f.id === p.factoryId) }));
+  if (tokens.length) {
+    results = results.filter(({p,f}) => {
+      const text = productSearchText(p, f);
+      return tokens.every(tok => text.includes(tok));
+    });
+  }
+  if (filterStoneType) results = results.filter(({p}) => p.stoneType === filterStoneType);
+  if (filterColor) results = results.filter(({p}) => p.color === filterColor);
+  if (filterPattern) results = results.filter(({p}) => p.pattern === filterPattern);
+  if (filterSort) results = results.filter(({p}) => p.sort === filterSort);
+  if (filterProcess) results = results.filter(({p}) => p.processType === filterProcess);
+  if (filterDimType) results = results.filter(({p}) => p.dimensionType === filterDimType);
+  if (priceMin !== '') results = results.filter(({p}) => Number(p.priceCash) >= Number(priceMin));
+  if (priceMax !== '') results = results.filter(({p}) => Number(p.priceCash) <= Number(priceMax));
+  if (sortMode === 'cheapest') results.sort((a,b) => a.p.priceCash - b.p.priceCash);
+  else if (sortMode === 'alpha') results.sort((a,b) => a.p.name.localeCompare(b.p.name, 'fa'));
+  else results.sort((a,b) => b.p.lastPriceDate.localeCompare(a.p.lastPriceDate));
+  const hasAnyFilter = tokens.length || filterStoneType || filterColor || filterPattern || filterSort || filterProcess || filterDimType || priceMin !== '' || priceMax !== '';
+  if (!hasAnyFilter) { wrap.innerHTML = `<div style="text-align:center;color:#857a69;font-size:12px;margin-top:24px;">نام سنگ، هر مشخصه (نوع، رنگ، طرح، سورت، فرآوری، ابعاد) یا نام/منطقهٔ کارخانه رو بنویس، یا با میکروفون بگو</div>`; return; }
+  if (results.length === 0) { wrap.innerHTML = emptyState('search', 'چیزی پیدا نشد', 'عبارت یا فیلتر دیگه‌ای رو امتحان کن.'); return; }
+  wrap.innerHTML = results.map(({p,f}) => `
+    <button class="card" data-action="openFactoryFromSearch" data-id="${f ? f.id : ''}">
+      <div class="thumb swatch" style="${p.photo ? '' : `background:${swatchFor(p.stoneType||p.name)}`}">${p.photo ? `<img src="${p.photo}">` : ''}</div>
+      <div class="grow">
+        <div class="title-sm">${esc(p.name)}</div>
+        <div class="sub-sm">${esc(f ? f.name : '')} · ${esc(f ? f.location : '')}</div>
+        ${f && f.phone ? `<div class="sub-sm">${icon('phone',10)} ${esc(f.phone)}${f.contactName ? ' · ' + esc(f.contactName) : ''}${f.contactTitle ? ' (' + esc(f.contactTitle) + ')' : ''}</div>` : ''}
+        <div class="price-mono" style="font-size:12px;font-weight:700;color:#C97D4A;margin-top:2px;">نقد: ${fmtNum(p.priceCash)} تومان</div>
+        ${p.priceCheck ? `<div class="price-mono" style="font-size:11px;font-weight:600;color:#8FB39A;">چک${p.checkMonths ? ' ' + esc(p.checkMonths) + ' ماهه' : ''}: ${fmtNum(p.priceCheck)} تومان</div>` : ''}
+      </div>
+    </button>`).join('');
+}
+
+function emptyState(iconName, title, desc) {
+  return `<div class="empty"><div class="ic">${icon(iconName,26)}</div><div class="t">${title}</div><div class="d">${desc}</div></div>`;
+}
+
+// ---------- render: bottom nav ----------
+function renderBottomNav() {
+  const el = document.getElementById('bottomnav');
+  el.innerHTML = `
+    <button class="navbtn ${view==='home'?'active':''}" data-action="goHome">${icon('home',19)}<span>خانه</span></button>
+    <button id="addBtn" data-action="openAdd">${icon('plus',22,'#171410')}</button>
+    <button class="navbtn ${view==='search'?'active':''}" data-action="goSearch">${icon('search',19)}<span>جستجو</span></button>
+  `;
+}
+
+function render() {
+  renderTopbar();
+  renderBody();
+  renderBottomNav();
+}
+
+// ---------- modals ----------
+function closeModal() {
+  factoryModalData = null; productModalData = null; productEntries = []; historyModalProduct = null;
+  document.getElementById('modalRoot').style.display = 'none';
+  document.getElementById('modalRoot').innerHTML = '';
+}
+
+function openFactoryModal(data) {
+  factoryModalData = data || {};
+  const d = factoryModalData;
+  const root = document.getElementById('modalRoot');
+  root.style.display = 'block';
+  root.innerHTML = `
+    <div class="modal-overlay" data-action="closeModalBg">
+      <div class="modal-sheet">
+        <div class="modal-head"><div class="t">${d.id ? 'ویرایش کارخانه' : 'کارخانهٔ جدید'}</div><button data-action="closeModal">${icon('x',18)}</button></div>
+        <div class="field"><label>نام کارخانه *</label><input id="f_name" value="${esc(d.name)}" placeholder="مثلاً کارخانه سنگ البرز"></div>
+        <div class="field"><label>منطقه / آدرس</label><input id="f_location" value="${esc(d.location)}" placeholder="شهرک صنعتی..."></div>
+        <div class="row2">
+          <div class="field"><label>شماره تماس</label><input id="f_phone" value="${esc(d.phone)}" placeholder="09..."></div>
+          <div class="field"><label>نام</label><input id="f_contactName" value="${esc(d.contactName)}" placeholder="مثلاً آقای سلطانی"></div>
+        </div>
+        <div class="field"><label>سمت شغلی</label><input id="f_contactTitle" value="${esc(d.contactTitle)}" placeholder="مثلاً مدیر فروش یا مالک کارخانه"></div>
+        <div class="field"><label>یادداشت</label><textarea id="f_notes" rows="2" placeholder="نکات اضافه...">${esc(d.notes)}</textarea></div>
+        <button class="save-btn" id="f_save" data-action="submitFactory">ذخیره</button>
+      </div>
+    </div>`;
+  const nameInput = document.getElementById('f_name');
+  const saveBtn = document.getElementById('f_save');
+  const checkValid = () => { saveBtn.disabled = !nameInput.value.trim(); };
+  nameInput.addEventListener('input', checkValid);
+  checkValid();
+  nameInput.focus();
+}
+
+function submitFactory() {
+  const name = document.getElementById('f_name').value.trim();
+  if (!name) return;
+  saveFactory({
+    id: factoryModalData.id,
+    name,
+    location: document.getElementById('f_location').value.trim(),
+    phone: document.getElementById('f_phone').value.trim(),
+    contactName: document.getElementById('f_contactName').value.trim(),
+    contactTitle: document.getElementById('f_contactTitle').value.trim(),
+    notes: document.getElementById('f_notes').value.trim()
+  });
+}
+
+function newEntryState(template) {
+  const t = template || {};
+  return {
+    localId: uid(), photo: null,
+    name: t.name || '', stoneType: t.stoneType || '', color: t.color || '', pattern: t.pattern || '',
+    process: t.process || '', sort: t.sort || '', qadopa: t.qadopa || '',
+    dimType: t.dimType || '', width: t.width || '', length: t.length || '', thickness: t.thickness || '',
+    spoutLength: t.spoutLength || '', spoutShape: t.spoutShape || '',
+    priceCash: t.priceCash || '', priceCheck: t.priceCheck || '', checkMonths: t.checkMonths || '',
+    priceValidityDays: t.priceValidityDays || '',
+    unit: t.unit || 'م.م', notes: t.notes || ''
+  };
+}
+
+function entryBlockHTML(entry, idx, isEdit) {
+  const id = entry.localId;
+  return `<div class="entry-card">
+    ${!isEdit ? `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-size:11px;color:#857a69;font-weight:600;">محصول ${idx + 1}</div>
+      ${productEntries.length > 1 ? `<button type="button" class="mini-btn" data-action="removeEntry" data-entry="${id}">${icon('x',12,'#D08C74')}</button>` : ''}
+    </div>` : ''}
+    <label class="photo-drop" id="photoDrop_${id}">
+      ${entry.photo ? `<img src="${entry.photo}">` : `<span style="display:flex;flex-direction:column;align-items:center;gap:4px;">${icon('camera',22)}<span style="font-size:12px;">افزودن عکس</span></span>`}
+      <input type="file" accept="image/*" id="p_photo_input_${id}">
+    </label>
+    <div class="field"><label>نام محصول *</label><input id="p_name_${id}" value="${esc(entry.name)}" placeholder="مثلاً مرمریت صلصالی"></div>
+    <div class="field">
+      <label>نوع سنگ</label>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <div style="flex:1;">${chipGroupHTML('stoneType', STONE_TYPE_OPTIONS, entry.stoneType, id)}</div>
+        <button type="button" class="mini-btn" style="width:36px;height:36px;border-radius:10px;flex-shrink:0;" data-action="voiceStone" data-entry="${id}">${icon('mic',15,'#EDE6D8')}</button>
+      </div>
+    </div>
+    <div class="field"><label>رنگ</label>${chipGroupHTML('color', COLOR_OPTIONS, entry.color, id)}</div>
+    <div class="field"><label>طرح سنگ</label>${chipGroupHTML('pattern', PATTERN_OPTIONS, entry.pattern, id)}</div>
+    <div class="field"><label>سورت سنگ</label>${chipGroupHTML('sort', SORT_OPTIONS, entry.sort, id)}</div>
+    <div class="field"><label>نوع فرآوری</label>${chipGroupHTML('process', PROCESS_OPTIONS, entry.process, id)}</div>
+    <div class="field"><label>قد و پا</label><input id="p_qadopa_${id}" value="${esc(entry.qadopa)}" placeholder="مثلاً ..."></div>
+    <div class="field">
+      <label>ابعاد و نوع محصول</label>
+      <div class="chip-row" id="dimTypeChips_${id}">${DIM_TYPES.map(o => `<button type="button" class="chip ${o === entry.dimType ? 'selected' : ''}" data-action="selectDimType" data-value="${esc(o)}" data-entry="${id}">${esc(o)}</button>`).join('')}</div>
+      <div id="dimDetail_${id}"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>قیمت نقد (تومان) *</label><input id="p_priceCash_${id}" value="${formatThousands(entry.priceCash)}" inputmode="numeric" placeholder="0"></div>
+      <div class="field" style="max-width:96px;"><label>واحد</label><input id="p_unit_${id}" value="${esc(entry.unit) || 'م.م'}" placeholder="م.م"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>قیمت چک (تومان)</label><input id="p_priceCheck_${id}" value="${formatThousands(entry.priceCheck)}" inputmode="numeric" placeholder="0"></div>
+      <div class="field" style="max-width:96px;"><label>مدت چک (ماه)</label><input id="p_checkMonths_${id}" type="number" value="${esc(entry.checkMonths)}" placeholder="مثلاً 6"></div>
+    </div>
+    <div class="field"><label>اعتبار قیمت (روز)</label><input id="p_priceValidity_${id}" type="number" value="${esc(entry.priceValidityDays)}" placeholder="مثلاً 10"></div>
+    <div class="field"><label>یادداشت</label><textarea id="p_notes_${id}" rows="2" placeholder="نکات اضافه...">${esc(entry.notes)}</textarea></div>
+  </div>`;
+}
+
+function attachPhotoHandler(entryId) {
+  const inputEl = document.getElementById('p_photo_input_' + entryId);
+  if (!inputEl) return;
+  inputEl.addEventListener('change', function photoChangeHandler(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    handlePhotoFile(file, (dataUrl) => {
+      const entry = productEntries.find(x => x.localId === entryId);
+      if (entry) entry.photo = dataUrl;
+      const drop = document.getElementById('photoDrop_' + entryId);
+      drop.innerHTML = `<img src="${dataUrl}"><input type="file" accept="image/*" id="p_photo_input_${entryId}">`;
+      attachPhotoHandler(entryId);
+    });
+  });
+}
+
+function renderProductEntriesModal() {
+  const isEdit = !!(productModalData && productModalData.editing);
+  const root = document.getElementById('modalRoot');
+  root.style.display = 'block';
+  const entriesHTML = productEntries.map((entry, idx) => entryBlockHTML(entry, idx, isEdit)).join('');
+  root.innerHTML = `
+    <div class="modal-overlay" data-action="closeModalBg">
+      <div class="modal-sheet">
+        <div class="modal-head"><div class="t">${isEdit ? 'ویرایش محصول' : 'محصول جدید'}</div><button data-action="closeModal">${icon('x',18)}</button></div>
+        <div id="entriesWrap">${entriesHTML}</div>
+        ${!isEdit ? `<button type="button" class="toggle-link" style="margin-bottom:14px;" data-action="addEntry">${icon('plus',13)} افزودن محصول دیگر (با عکس جدید)</button>` : ''}
+        <button class="save-btn" data-action="submitEntries">${!isEdit && productEntries.length > 1 ? 'ذخیره همه' : 'ذخیره'}</button>
+      </div>
+    </div>`;
+  productEntries.forEach(entry => {
+    attachPhotoHandler(entry.localId);
+    attachPriceFormatting('p_priceCash_' + entry.localId);
+    attachPriceFormatting('p_priceCheck_' + entry.localId);
+    renderDimDetail(entry.localId, entry.dimType, entry);
+    ['stoneType', 'color', 'pattern', 'process', 'sort'].forEach(field => {
+      const input = document.getElementById('p_custom_' + field + '_' + entry.localId);
+      if (input) input.addEventListener('input', () => {
+        document.getElementById(field + 'Chips_' + entry.localId).querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        entry[field] = null;
+      });
+    });
+  });
+  const first = document.getElementById('p_name_' + productEntries[0].localId);
+  if (first) first.focus();
+}
+
+function syncEntriesFromDOM() {
+  const g = (elId) => { const el = document.getElementById(elId); return el ? el.value : undefined; };
+  productEntries.forEach(entry => {
+    const id = entry.localId;
+    if (g('p_name_' + id) !== undefined) entry.name = g('p_name_' + id);
+    if (g('p_qadopa_' + id) !== undefined) entry.qadopa = g('p_qadopa_' + id);
+    if (g('p_priceCash_' + id) !== undefined) entry.priceCash = g('p_priceCash_' + id).replace(/\./g, '');
+    if (g('p_priceCheck_' + id) !== undefined) entry.priceCheck = g('p_priceCheck_' + id).replace(/\./g, '');
+    if (g('p_checkMonths_' + id) !== undefined) entry.checkMonths = g('p_checkMonths_' + id);
+    if (g('p_priceValidity_' + id) !== undefined) entry.priceValidityDays = g('p_priceValidity_' + id);
+    if (g('p_unit_' + id) !== undefined) entry.unit = g('p_unit_' + id);
+    if (g('p_notes_' + id) !== undefined) entry.notes = g('p_notes_' + id);
+    ['stoneType', 'color', 'pattern', 'process', 'sort'].forEach(f => {
+      const customVal = g('p_custom_' + f + '_' + id);
+      if (customVal) entry[f] = customVal;
+    });
+    const customThickness = g('p_custom_thickness_' + id);
+    if (customThickness) entry.thickness = customThickness;
+    const customWidth = g('p_custom_width_' + id);
+    if (customWidth) entry.width = customWidth;
+    if (entry.dimType && entry.dimType !== 'تایل' && entry.dimType !== 'صراحی') {
+      if (g('dim_width_input_' + id) !== undefined) entry.width = g('dim_width_input_' + id);
+      if (g('dim_length_input_' + id) !== undefined) entry.length = g('dim_length_input_' + id);
+    }
+    if (entry.dimType === 'صراحی') {
+      if (g('dim_spoutLength_' + id) !== undefined) entry.spoutLength = g('dim_spoutLength_' + id);
+    }
+  });
+}
+
+function openProductModal(factoryId, editing) {
+  productModalData = { factoryId, editing };
+  if (editing) {
+    productEntries = [{
+      localId: editing.id, photo: editing.photo, name: editing.name, stoneType: editing.stoneType,
+      color: editing.color, pattern: editing.pattern, process: editing.processType, sort: editing.sort,
+      qadopa: editing.qadopa,
+      dimType: editing.dimensionType, width: editing.width, length: editing.length, thickness: editing.thickness,
+      spoutLength: editing.spoutLength, spoutShape: editing.spoutShape,
+      priceCash: editing.priceCash, priceCheck: editing.priceCheck, checkMonths: editing.checkMonths,
+      priceValidityDays: editing.priceValidityDays,
+      unit: editing.unit, notes: editing.notes
+    }];
+  } else {
+    const lastProduct = products.find(p => p.factoryId === factoryId);
+    if (lastProduct) {
+      productEntries = [newEntryState({
+        name: lastProduct.name, stoneType: lastProduct.stoneType, color: lastProduct.color,
+        pattern: lastProduct.pattern, process: lastProduct.processType, sort: lastProduct.sort,
+        qadopa: lastProduct.qadopa, dimType: lastProduct.dimensionType, width: lastProduct.width,
+        length: lastProduct.length, thickness: lastProduct.thickness,
+        spoutLength: lastProduct.spoutLength, spoutShape: lastProduct.spoutShape,
+        priceCash: lastProduct.priceCash, priceCheck: lastProduct.priceCheck, checkMonths: lastProduct.checkMonths,
+        priceValidityDays: lastProduct.priceValidityDays, unit: lastProduct.unit, notes: lastProduct.notes
+      })];
+    } else {
+      productEntries = [newEntryState()];
+    }
+  }
+  renderProductEntriesModal();
+}
+
+function submitEntries() {
+  const isEdit = !!(productModalData && productModalData.editing);
+  const g = (elId) => { const el = document.getElementById(elId); return el ? el.value : ''; };
+  let savedCount = 0;
+  productEntries.forEach((entry, idx) => {
+    const id = entry.localId;
+    const name = g('p_name_' + id).trim();
+    const priceCashRaw = g('p_priceCash_' + id).replace(/\./g, '').trim();
+    if (!name || priceCashRaw === '') return;
+    const stoneType = g('p_custom_stoneType_' + id).trim() || entry.stoneType || '';
+    const color = g('p_custom_color_' + id).trim() || entry.color || '';
+    const pattern = g('p_custom_pattern_' + id).trim() || entry.pattern || '';
+    const processType = g('p_custom_process_' + id).trim() || entry.process || '';
+    const sort = g('p_custom_sort_' + id).trim() || entry.sort || '';
+    let width = '', length = '', thickness = '', spoutLength = '', spoutShape = '';
+    if (entry.dimType === 'تایل') {
+      width = g('p_custom_width_' + id).trim() || entry.width || '';
+      length = 'آزاد';
+      thickness = g('p_custom_thickness_' + id).trim() || entry.thickness || '';
+    } else if (entry.dimType === 'صراحی') {
+      spoutLength = g('dim_spoutLength_' + id);
+      spoutShape = entry.spoutShape || '';
+    } else if (entry.dimType) {
+      width = g('dim_width_input_' + id);
+      length = g('dim_length_input_' + id);
+      thickness = g('p_custom_thickness_' + id).trim() || entry.thickness || '';
+    }
+    const priceCheckRaw = g('p_priceCheck_' + id).replace(/\./g, '').trim();
+    saveProductSingle({
+      id: (isEdit && idx === 0) ? productModalData.editing.id : undefined,
+      factoryId: productModalData.factoryId,
+      name, stoneType, color, pattern, processType, sort,
+      qadopa: g('p_qadopa_' + id).trim(),
+      dimensionType: entry.dimType || '', width, length, thickness, spoutLength, spoutShape,
+      unit: g('p_unit_' + id).trim() || 'م.م',
+      priceCash: Number(priceCashRaw),
+      priceCheck: priceCheckRaw !== '' ? Number(priceCheckRaw) : '',
+      checkMonths: g('p_checkMonths_' + id).trim(),
+      priceValidityDays: g('p_priceValidity_' + id).trim(),
+      notes: g('p_notes_' + id).trim(),
+      photo: entry.photo
+    });
+    savedCount++;
+  });
+  if (savedCount === 0) { showToast('نام و قیمت نقد لازمه'); return; }
+  closeModal();
+  showToast(isEdit ? 'محصول به‌روزرسانی شد' : (savedCount > 1 ? savedCount + ' محصول ثبت شد' : 'محصول ثبت شد'));
+}
+
+function openHistoryModal(product) {
+  historyModalProduct = product;
+  const root = document.getElementById('modalRoot');
+  root.style.display = 'block';
+  const oldRows = [...product.priceHistory].reverse().map(h => `
+    <div class="hist-old">
+      <div>
+        <div style="font-size:12px;color:#857a69;">قیمت قبلی</div>
+        <div style="font-size:10px;color:#857a69;">${fmtDate(h.date)}</div>
+      </div>
+      <div style="text-align:left;">
+        <div class="price-mono" style="font-size:13px;color:#EDE6D8;">نقد: ${fmtNum(h.priceCash)}</div>
+        ${h.priceCheck ? `<div class="price-mono" style="font-size:11px;color:#8FB39A;">چک${h.checkMonths ? ' ' + esc(h.checkMonths) + ' ماهه' : ''}: ${fmtNum(h.priceCheck)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  root.innerHTML = `
+    <div class="modal-overlay" data-action="closeModalBg">
+      <div class="modal-sheet" style="max-height:70%;">
+        <div class="modal-head"><div class="t">تاریخچهٔ قیمت · ${esc(product.name)}</div><button data-action="closeModal">${icon('x',18)}</button></div>
+        <div class="hist-cur">
+          <div>
+            <div style="font-size:12px;color:#C97D4A;font-weight:700;">قیمت فعلی</div>
+            <div style="font-size:10px;color:#857a69;">${fmtDate(product.lastPriceDate)}</div>
+          </div>
+          <div style="text-align:left;">
+            <div class="price-mono" style="font-size:14px;font-weight:700;color:#C97D4A;">نقد: ${fmtNum(product.priceCash)}</div>
+            ${product.priceCheck ? `<div class="price-mono" style="font-size:12px;color:#8FB39A;">چک${product.checkMonths ? ' ' + esc(product.checkMonths) + ' ماهه' : ''}: ${fmtNum(product.priceCheck)}</div>` : ''}
+          </div>
+        </div>
+        ${oldRows}
+      </div>
+    </div>`;
+}
+
+// ---------- delegated click handling ----------
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-action]');
+  if (!t) return;
+  const action = t.getAttribute('data-action');
+  const id = t.getAttribute('data-id');
+  const entryId = t.getAttribute('data-entry');
+  switch (action) {
+    case 'goHome': view = 'home'; searchQuery=''; render(); break;
+    case 'goSearch': view = 'search'; render(); break;
+    case 'goRecent': view = 'recent'; render(); break;
+    case 'goFactories': view = 'factories'; render(); break;
+    case 'openFactory': activeFactoryId = id; view = 'factory'; showInactive = false; render(); break;
+    case 'openFactoryFromSearch': if (id) { activeFactoryId = id; view = 'factory'; searchQuery=''; showInactive = false; render(); } break;
+    case 'editFactory': openFactoryModal(factories.find(f => f.id === activeFactoryId)); break;
+    case 'toggleInactive': showInactive = !showInactive; renderBody(); break;
+    case 'toggleActive': toggleActive(id); break;
+    case 'editProduct': openProductModal(activeFactoryId, products.find(p => p.id === id)); break;
+    case 'showHistory': openHistoryModal(products.find(p => p.id === id)); break;
+    case 'openAdd': view === 'factory' ? openProductModal(activeFactoryId, null) : openFactoryModal({}); break;
+    case 'closeModal': closeModal(); break;
+    case 'closeModalBg': if (t === e.target) closeModal(); break;
+    case 'submitFactory': submitFactory(); break;
+    case 'submitEntries': submitEntries(); break;
+    case 'addEntry': {
+      syncEntriesFromDOM();
+      const last = productEntries[productEntries.length - 1];
+      productEntries.push(newEntryState(last));
+      renderProductEntriesModal();
+      break;
+    }
+    case 'removeEntry': {
+      syncEntriesFromDOM();
+      productEntries = productEntries.filter(en => en.localId !== entryId);
+      if (!productEntries.length) productEntries = [newEntryState()];
+      renderProductEntriesModal();
+      break;
+    }
+    case 'voiceSearch': startVoice('searchInput'); break;
+    case 'voiceHome': startVoice('searchInput'); break;
+    case 'voiceStone': startVoice('p_custom_stoneType_' + entryId); break;
+    case 'setSort': sortMode = t.getAttribute('data-sort'); renderBody(); break;
+    case 'togglePriceFilter': showPriceFilter = !showPriceFilter; renderBody(); break;
+    case 'toggleAttrFilter': showAttrFilter = !showAttrFilter; renderBody(); break;
+    case 'selectChip': {
+      const field = t.getAttribute('data-field');
+      const value = t.getAttribute('data-value');
+      const entry = productEntries.find(en => en.localId === entryId);
+      if (entry) entry[field] = value;
+      document.getElementById(field + 'Chips_' + entryId).querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      t.classList.add('selected');
+      const customInput = document.getElementById('p_custom_' + field + '_' + entryId);
+      if (customInput) customInput.value = '';
+      break;
+    }
+    case 'selectDimType': {
+      const value = t.getAttribute('data-value');
+      const entry = productEntries.find(en => en.localId === entryId);
+      if (entry) { entry.dimType = value; entry.width = ''; entry.length = ''; entry.thickness = ''; entry.spoutLength = ''; entry.spoutShape = ''; }
+      document.getElementById('dimTypeChips_' + entryId).querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      t.classList.add('selected');
+      renderDimDetail(entryId, value, {});
+      break;
+    }
+    case 'selectSpoutShape': {
+      const value = t.getAttribute('data-value');
+      const entry = productEntries.find(en => en.localId === entryId);
+      if (entry) entry.spoutShape = value;
+      document.getElementById('spoutShapeChips_' + entryId).querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+      t.classList.add('selected');
+      break;
+    }
+  }
+});
+
+// ---------- init ----------
+loadData();
+</script>
+</body>
+</html>
