@@ -69,7 +69,7 @@
   .swatch { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .grow { flex: 1; min-width: 0; }
   .title-sm { font-weight: 600; color: #EDE6D8; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub-sm { font-size: 11px; color: #857a69; display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub-sm { font-size: 11px; color: #857a69; display: flex; align-items: center; gap: 4px; white-space: normal; word-break: break-word; }
   .badge { font-size: 11px; background: rgba(201,125,74,0.15); color: #C97D4A; border-radius: 999px; padding: 4px 8px; font-weight: 600; flex-shrink: 0; }
   .empty { text-align: center; margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #857a69; }
   .empty .ic { width: 56px; height: 56px; border-radius: 16px; background: #1E1A15; border: 1px solid #2a2620; display: flex; align-items: center; justify-content: center; }
@@ -101,6 +101,7 @@
   .filter-chip.active { background: #C97D4A; border-color: #C97D4A; color: #171410; font-weight: 600; }
 
   #modalRoot { position: absolute; inset: 0; z-index: 30; display: none; }
+  #lightboxRoot { position: absolute; inset: 0; z-index: 60; display: none; }
   .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: flex-end; }
   .modal-sheet { background: #1E1A15; border-top: 1px solid #332c22; width: 100%; border-radius: 24px 24px 0 0; padding: 20px; max-height: 92%; overflow-y: auto; }
   .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -116,9 +117,23 @@
   .row2 > .field { flex: 1; }
   .save-btn { width: 100%; background: #C97D4A; color: #171410; border: none; border-radius: 12px; padding: 13px; font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; margin-top: 4px; }
   .save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .photo-drop { width: 100%; height: 112px; border-radius: 16px; border: 2px dashed #332c22; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 12px; cursor: pointer; position: relative; color: #857a69; }
-  .photo-drop img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
-  .photo-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .photo-thumb-item { position: relative; width: 72px; height: 72px; border-radius: 12px; overflow: hidden; flex-shrink: 0; }
+  .photo-thumb-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+  .photo-remove-btn { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.6); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+  .photo-add-tile { width: 72px; height: 72px; border-radius: 12px; border: 2px dashed #332c22; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; color: #857a69; flex-shrink: 0; }
+  .photo-add-tile input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-count-badge { position: absolute; bottom: 3px; left: 3px; background: rgba(0,0,0,0.65); color: #EDE6D8; font-size: 9px; font-weight: 700; border-radius: 999px; padding: 1px 5px; }
+  .detail-gallery { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; }
+  .detail-gallery-img { height: 150px; border-radius: 14px; object-fit: cover; flex-shrink: 0; cursor: pointer; }
+  .lightbox-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 60; }
+  .lightbox-overlay img { max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain; }
+  .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .lightbox-nav.lightbox-prev { right: 16px; }
+  .lightbox-nav.lightbox-next { left: 16px; }
+  .lightbox-close { position: absolute; top: 16px; left: 16px; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .lightbox-counter { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); color: #fff; font-size: 11px; padding: 4px 10px; border-radius: 999px; }
+  .rating-badge { font-size: 10px; font-weight: 700; border-radius: 999px; padding: 3px 9px; border: 1px solid; white-space: nowrap; flex-shrink: 0; }
 
   #toast { position: absolute; bottom: 96px; left: 50%; transform: translateX(-50%); background: #C97D4A; color: #171410; font-size: 12px; font-weight: 600; padding: 9px 16px; border-radius: 999px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); display: none; z-index: 40; }
 
@@ -143,6 +158,7 @@
   <div id="bodyArea"></div>
   <div id="bottomnav"></div>
   <div id="modalRoot"></div>
+  <div id="lightboxRoot"></div>
   <div id="toast"></div>
 </div>
 
@@ -184,6 +200,8 @@ let filterPattern = '';
 let filterSort = '';
 let filterProcess = '';
 let filterDimType = '';
+let activeProductId = null;
+let productDetailFrom = 'search';
 
 let factoryModalData = null;
 let productModalData = null;
@@ -282,6 +300,53 @@ function renderDimDetail(entryId, dimType, existing) {
   });
 }
 
+function getProductPhotos(p) {
+  if (p.photos && p.photos.length) return p.photos;
+  if (p.photo) return [p.photo];
+  return [];
+}
+
+const RATING_COLORS = {
+  'خیلی ضعیف': '#D14343',
+  'ضعیف': '#D08C74',
+  'متوسط': '#C9A227',
+  'خوب': '#8FB39A',
+  'بسیار خوب': '#5FA776'
+};
+function factoryRatingScore(f) {
+  if (!f) return null;
+  const vals = [f.ratingCut, f.ratingSab, f.ratingSort, f.ratingBehavior];
+  if (vals.some(v => v === undefined || v === null || v === '')) return null;
+  const [cut, sab, sort, behavior] = vals.map(Number);
+  if ([cut, sab, sort, behavior].some(v => isNaN(v))) return null;
+  return (cut * 1 + sab * 1 + sort * 2 + behavior * 2) / 6;
+}
+function factoryRatingLabel(score) {
+  if (score < 2) return 'خیلی ضعیف';
+  if (score < 4) return 'ضعیف';
+  if (score < 6) return 'متوسط';
+  if (score < 8) return 'خوب';
+  return 'بسیار خوب';
+}
+function factoryRatingBadgeHTML(f) {
+  const score = factoryRatingScore(f);
+  if (score === null) return '';
+  const label = factoryRatingLabel(score);
+  const color = RATING_COLORS[label] || '#857a69';
+  return `<span class="rating-badge" style="background:${color}22;color:${color};border-color:${color}66;">${score.toFixed(1)} · ${label}</span>`;
+}
+
+function productThumbHTML(p, cls) {
+  const photos = getProductPhotos(p);
+  if (!photos.length) {
+    return `<div class="${cls}" style="position:relative;background:${swatchFor(p.stoneType||p.name)}"></div>`;
+  }
+  return `<div class="${cls}" data-action="openLightbox" data-id="${p.id}" data-idx="0" style="position:relative;cursor:pointer;">
+    <img src="${photos[0]}" style="width:100%;height:100%;object-fit:cover;">
+    ${photos.length > 1 ? `<span class="photo-count-badge">+${photos.length - 1}</span>` : ''}
+  </div>`;
+}
+
 function swatchFor(name) {
   name = name || '';
   let hash = 0;
@@ -314,6 +379,7 @@ function icon(name, size = 18, color = 'currentColor') {
     case 'check': return wrap(`<path d="M5 12l5 5L20 6"/>`);
     case 'factory': return wrap(`<path d="M4 20V11l5 3v-3l5 3V8l6 3v9H4z"/>`);
     case 'alert': return wrap(`<path d="M12 3l9 17H3z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/>`);
+    case 'chevronRight': return wrap(`<path d="M9 6l6 6-6 6"/>`);
     default: return '';
   }
 }
@@ -352,7 +418,9 @@ function showToast(msg) {
 function saveFactory(data) {
   const payload = {
     name: data.name, location: data.location||'', phone: data.phone||'',
-    contactName: data.contactName||'', contactTitle: data.contactTitle||'', notes: data.notes||''
+    contactName: data.contactName||'', contactTitle: data.contactTitle||'',
+    ratingCut: data.ratingCut||'', ratingSab: data.ratingSab||'', ratingSort: data.ratingSort||'', ratingBehavior: data.ratingBehavior||'',
+    notes: data.notes||''
   };
   if (data.id) {
     db.collection(COL_FACTORIES).doc(data.id).update(payload)
@@ -385,7 +453,7 @@ function saveProductSingle(data) {
       spoutLength: data.spoutLength||'', spoutShape: data.spoutShape||'',
       unit: data.unit||'م.م', priceCash: data.priceCash||0, priceCheck: data.priceCheck||'', checkMonths: data.checkMonths||'',
       priceValidityDays: data.priceValidityDays||'',
-      photo: data.photo||null, notes: data.notes||'',
+      photos: data.photos||[], notes: data.notes||'',
       active: true, createdAt: todayISO(), lastPriceDate: todayISO(), priceHistory: []
     };
     db.collection(COL_PRODUCTS).add(payload).catch(() => showToast('ذخیره‌سازی ناموفق بود'));
@@ -462,9 +530,15 @@ function renderTopbar() {
       <button class="icon-btn" data-action="goFactories">${icon('arrowRight',17)}</button>
       <div style="flex:1;text-align:center;padding:0 8px;overflow:hidden;">
         <div style="font-size:14px;font-weight:700;color:#EDE6D8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.name)}</div>
-        <div style="font-size:10px;color:#857a69;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.location)}</div>
+        <div style="font-size:10px;color:#857a69;white-space:normal;word-break:break-word;">${esc(f.location)}</div>
       </div>
       <button class="icon-btn" data-action="editFactory">${icon('edit',15)}</button>
+    `;
+  } else if (view === 'productDetail') {
+    el.innerHTML = `
+      <button class="icon-btn" data-action="goBackFromDetail">${icon('arrowRight',17)}</button>
+      <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#EDE6D8;">جزئیات محصول</div>
+      <span style="width:36px;flex-shrink:0;"></span>
     `;
   } else if (view === 'search') {
     el.innerHTML = `
@@ -538,10 +612,11 @@ function renderBody() {
       el.innerHTML = activeProducts.map(p => {
         const f = factories.find(x => x.id === p.factoryId);
         return `<button class="card" data-action="openFactoryFromSearch" data-id="${p.factoryId}">
-          <div class="thumb swatch" style="${p.photo ? '' : `background:${swatchFor(p.stoneType||p.name)}`}">${p.photo ? `<img src="${p.photo}">` : ''}</div>
+          ${productThumbHTML(p, 'thumb swatch')}
           <div class="grow">
             <div class="title-sm">${esc(p.name)}</div>
             <div class="sub-sm">${esc(f ? f.name : '')}</div>
+            ${f && factoryRatingBadgeHTML(f) ? `<div style="margin-top:3px;">${factoryRatingBadgeHTML(f)}</div>` : ''}
           </div>
           <div class="price-mono price-val" style="font-size:12px;">${fmtNum(p.priceCash)}</div>
         </button>`;
@@ -561,6 +636,7 @@ function renderBody() {
             <div class="grow">
               <div class="title-sm">${esc(f.name)}</div>
               <div class="sub-sm">${icon('mapPin',11)} ${esc(f.location) || 'بدون آدرس'}</div>
+              ${factoryRatingBadgeHTML(f) ? `<div style="margin-top:4px;">${factoryRatingBadgeHTML(f)}</div>` : ''}
             </div>
             <div class="badge price-mono">${count}</div>
             ${icon('chevronLeft',16,'#6f6558')}
@@ -576,6 +652,7 @@ function renderBody() {
       <button class="toggle-link" data-action="toggleInactive">${icon(showInactive ? 'eye' : 'eyeOff', 13)} ${showInactive ? 'نمایش غیرفعال‌ها' : 'فقط فعال‌ها'}</button>
       ${f.phone ? `<a class="call-link" href="tel:${esc(f.phone)}">${icon('phone',12)} ${esc(f.phone)}${f.contactName ? ' · ' + esc(f.contactName) : ''}${f.contactTitle ? ' (' + esc(f.contactTitle) + ')' : ''}</a>` : '<span></span>'}
     </div>`;
+    if (factoryRatingBadgeHTML(f)) html += `<div style="margin-bottom:12px;">${factoryRatingBadgeHTML(f)}</div>`;
     if (list.length === 0) {
       html += emptyState('package', 'محصولی ثبت نشده', 'با دکمهٔ + یک محصول با عکس و قیمت اضافه کن.');
     } else {
@@ -584,8 +661,8 @@ function renderBody() {
           : p.dimensionType === 'صراحی' ? `طول ${esc(p.spoutLength)} · ${esc(p.spoutShape)}`
           : `${esc(p.width)}×${esc(p.length)}`;
         return `
-        <div class="prodrow ${!p.active ? 'inactive' : ''}">
-          <div class="thumb" style="${p.photo ? '' : `background:${swatchFor(p.stoneType||p.name)}`}">${p.photo ? `<img src="${p.photo}">` : ''}</div>
+        <div class="prodrow ${!p.active ? 'inactive' : ''}" data-action="openProductDetail" data-id="${p.id}" style="cursor:pointer;">
+          ${productThumbHTML(p, 'thumb')}
           <div class="grow">
             <div class="title-sm">${esc(p.name)}</div>
             <div class="sub-sm">${esc(p.stoneType)}</div>
@@ -612,6 +689,58 @@ function renderBody() {
       }).join('');
     }
     el.innerHTML = html;
+  }
+
+  else if (view === 'productDetail') {
+    const p = products.find(x => x.id === activeProductId);
+    if (!p) {
+      el.innerHTML = emptyState('package', 'محصول پیدا نشد', 'شاید این محصول حذف یا غیرفعال شده باشد.');
+    } else {
+      const f = factories.find(x => x.id === p.factoryId);
+      const photos = getProductPhotos(p);
+      const dimTag = p.dimensionType === 'تایل' ? `عرض ${esc(p.width)} (طول آزاد)`
+        : p.dimensionType === 'صراحی' ? `طول ${esc(p.spoutLength)} · ${esc(p.spoutShape)}`
+        : `${esc(p.width)}×${esc(p.length)}`;
+      let html = '';
+      if (photos.length) {
+        html += `<div class="detail-gallery">${photos.map((ph, idx) => `<img src="${ph}" class="detail-gallery-img" data-action="openLightbox" data-id="${p.id}" data-idx="${idx}">`).join('')}</div>`;
+      } else {
+        html += `<div style="width:100%;height:160px;border-radius:16px;background:${swatchFor(p.stoneType||p.name)};margin-bottom:14px;"></div>`;
+      }
+      html += `<div class="title-sm" style="font-size:16px;margin-bottom:4px;">${esc(p.name)}</div>`;
+      html += `<div class="sub-sm" style="margin-bottom:10px;">${esc(p.stoneType)}</div>`;
+      if (p.color || p.pattern || p.processType || p.sort || p.dimensionType || p.thickness || p.qadopa) {
+        html += `<div class="tag-row" style="margin-bottom:12px;">
+          ${[p.color,p.pattern,p.processType,p.sort].filter(Boolean).map(x => `<span class="tag-pill">${esc(x)}</span>`).join('')}
+          ${p.qadopa ? `<span class="tag-pill">قد و پا: ${esc(p.qadopa)}</span>` : ''}
+          ${p.dimensionType ? `<span class="tag-pill">${esc(p.dimensionType)} · ${dimTag}</span>` : ''}
+          ${p.thickness ? `<span class="tag-pill">ضخامت ${esc(p.thickness)}</span>` : ''}
+        </div>`;
+      }
+      html += `<div class="price-row">
+        <span class="price-mono price-val">${fmtNum(p.priceCash)}</span>
+        <span class="unit-lbl">تومان / ${esc(p.unit)}</span>
+        <span class="unit-lbl">· ${fmtDate(p.lastPriceDate)}</span>
+        ${isPriceExpired(p) ? `<span title="اعتبار قیمت تمام شده">${icon('alert',13,'#D08C74')}</span>` : ''}
+        ${p.priceHistory && p.priceHistory.length > 0 ? `<button class="hist-link" data-action="showHistory" data-id="${p.id}">${icon('history',11)} تاریخچه</button>` : ''}
+      </div>`;
+      if (p.priceCheck) html += `<div class="check-lbl" style="margin-bottom:10px;">چک${p.checkMonths ? ' ' + esc(p.checkMonths) + ' ماهه' : ''}: ${fmtNum(p.priceCheck)} تومان</div>`;
+      if (p.notes) html += `<div class="sub-sm" style="margin-top:8px;white-space:normal;">${esc(p.notes)}</div>`;
+      html += `<div class="card" style="margin-top:16px;cursor:default;">
+        <div class="swatch" style="background:${swatchFor(f ? f.name : '')}">${icon('factory',18,'rgba(255,255,255,0.9)')}</div>
+        <div class="grow">
+          <div class="title-sm">${esc(f ? f.name : '')}</div>
+          <div class="sub-sm">${icon('mapPin',11)} ${esc(f ? f.location : '') || 'بدون آدرس'}</div>
+          ${f && factoryRatingBadgeHTML(f) ? `<div style="margin-top:4px;">${factoryRatingBadgeHTML(f)}</div>` : ''}
+        </div>
+      </div>`;
+      if (f && f.phone) {
+        html += `<a href="tel:${esc(f.phone)}" class="save-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;">
+          ${icon('phone',16,'#171410')} تماس با ${esc(f.contactName || f.name)}${f.contactTitle ? ' (' + esc(f.contactTitle) + ')' : ''}
+        </a>`;
+      }
+      el.innerHTML = html;
+    }
   }
 
   else if (view === 'search') {
@@ -706,11 +835,12 @@ function renderSearchResultsOnly() {
   if (!hasAnyFilter) { wrap.innerHTML = `<div style="text-align:center;color:#857a69;font-size:12px;margin-top:24px;">نام سنگ، هر مشخصه (نوع، رنگ، طرح، سورت، فرآوری، ابعاد) یا نام/منطقهٔ کارخانه رو بنویس، یا با میکروفون بگو</div>`; return; }
   if (results.length === 0) { wrap.innerHTML = emptyState('search', 'چیزی پیدا نشد', 'عبارت یا فیلتر دیگه‌ای رو امتحان کن.'); return; }
   wrap.innerHTML = results.map(({p,f}) => `
-    <button class="card" data-action="openFactoryFromSearch" data-id="${f ? f.id : ''}">
-      <div class="thumb swatch" style="${p.photo ? '' : `background:${swatchFor(p.stoneType||p.name)}`}">${p.photo ? `<img src="${p.photo}">` : ''}</div>
+    <button class="card" data-action="openProductDetail" data-id="${p.id}">
+      ${productThumbHTML(p, 'thumb swatch')}
       <div class="grow">
         <div class="title-sm">${esc(p.name)}</div>
         <div class="sub-sm">${esc(f ? f.name : '')} · ${esc(f ? f.location : '')}</div>
+        ${f && factoryRatingBadgeHTML(f) ? `<div style="margin:3px 0;">${factoryRatingBadgeHTML(f)}</div>` : ''}
         ${f && f.phone ? `<div class="sub-sm">${icon('phone',10)} ${esc(f.phone)}${f.contactName ? ' · ' + esc(f.contactName) : ''}${f.contactTitle ? ' (' + esc(f.contactTitle) + ')' : ''}</div>` : ''}
         <div class="price-mono" style="font-size:12px;font-weight:700;color:#C97D4A;margin-top:2px;">نقد: ${fmtNum(p.priceCash)} تومان</div>
         ${p.priceCheck ? `<div class="price-mono" style="font-size:11px;font-weight:600;color:#8FB39A;">چک${p.checkMonths ? ' ' + esc(p.checkMonths) + ' ماهه' : ''}: ${fmtNum(p.priceCheck)} تومان</div>` : ''}
@@ -745,6 +875,62 @@ function closeModal() {
   document.getElementById('modalRoot').innerHTML = '';
 }
 
+let lightboxPhotos = [];
+let lightboxIndex = 0;
+
+function openLightbox(photos, idx) {
+  lightboxPhotos = photos || [];
+  lightboxIndex = idx || 0;
+  if (!lightboxPhotos.length) return;
+  renderLightbox();
+}
+
+function lightboxNext() {
+  if (!lightboxPhotos.length) return;
+  lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
+  renderLightbox();
+}
+
+function lightboxPrev() {
+  if (!lightboxPhotos.length) return;
+  lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
+  renderLightbox();
+}
+
+function renderLightbox() {
+  const root = document.getElementById('lightboxRoot');
+  root.style.display = 'block';
+  const total = lightboxPhotos.length;
+  root.innerHTML = `<div class="lightbox-overlay" data-action="closeLightbox">
+    <button class="lightbox-close" data-action="closeLightbox">${icon('x',16,'#fff')}</button>
+    <img src="${lightboxPhotos[lightboxIndex]}" data-action="noop">
+    ${total > 1 ? `
+      <button class="lightbox-nav lightbox-prev" data-action="lightboxPrev">${icon('chevronRight',20,'#fff')}</button>
+      <button class="lightbox-nav lightbox-next" data-action="lightboxNext">${icon('chevronLeft',20,'#fff')}</button>
+      <div class="lightbox-counter">${lightboxIndex+1} / ${total}</div>
+    ` : ''}
+  </div>`;
+  if (total > 1) {
+    const overlay = root.querySelector('.lightbox-overlay');
+    let startX = null;
+    overlay.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, { passive: true });
+    overlay.addEventListener('touchend', (e) => {
+      if (startX === null) return;
+      const diff = e.changedTouches[0].clientX - startX;
+      if (Math.abs(diff) > 40) { diff < 0 ? lightboxNext() : lightboxPrev(); }
+      startX = null;
+    }, { passive: true });
+  }
+}
+
+function closeLightbox() {
+  const root = document.getElementById('lightboxRoot');
+  root.style.display = 'none';
+  root.innerHTML = '';
+  lightboxPhotos = [];
+  lightboxIndex = 0;
+}
+
 function openFactoryModal(data) {
   factoryModalData = data || {};
   const d = factoryModalData;
@@ -761,6 +947,16 @@ function openFactoryModal(data) {
           <div class="field"><label>نام</label><input id="f_contactName" value="${esc(d.contactName)}" placeholder="مثلاً آقای سلطانی"></div>
         </div>
         <div class="field"><label>سمت شغلی</label><input id="f_contactTitle" value="${esc(d.contactTitle)}" placeholder="مثلاً مدیر فروش یا مالک کارخانه"></div>
+        <div class="field"><label>امتیازدهی کارخانه (۰ تا ۱۰)</label></div>
+        <div class="row2">
+          <div class="field"><label>کیفیت برش</label><input id="f_ratingCut" type="number" min="0" max="10" step="0.1" value="${esc(d.ratingCut)}" placeholder="0-10"></div>
+          <div class="field"><label>کیفیت ساب</label><input id="f_ratingSab" type="number" min="0" max="10" step="0.1" value="${esc(d.ratingSab)}" placeholder="0-10"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>کیفیت سورت (وزن ۲×)</label><input id="f_ratingSort" type="number" min="0" max="10" step="0.1" value="${esc(d.ratingSort)}" placeholder="0-10"></div>
+          <div class="field"><label>برخورد با مشتری (وزن ۲×)</label><input id="f_ratingBehavior" type="number" min="0" max="10" step="0.1" value="${esc(d.ratingBehavior)}" placeholder="0-10"></div>
+        </div>
+        <div id="ratingPreview" style="margin-bottom:12px;"></div>
         <div class="field"><label>یادداشت</label><textarea id="f_notes" rows="2" placeholder="نکات اضافه...">${esc(d.notes)}</textarea></div>
         <button class="save-btn" id="f_save" data-action="submitFactory">ذخیره</button>
       </div>
@@ -771,6 +967,19 @@ function openFactoryModal(data) {
   nameInput.addEventListener('input', checkValid);
   checkValid();
   nameInput.focus();
+  const updateRatingPreview = () => {
+    const g = (id) => document.getElementById(id).value;
+    const score = factoryRatingScore({ ratingCut: g('f_ratingCut'), ratingSab: g('f_ratingSab'), ratingSort: g('f_ratingSort'), ratingBehavior: g('f_ratingBehavior') });
+    const el = document.getElementById('ratingPreview');
+    if (score === null) { el.innerHTML = `<div style="font-size:11px;color:#857a69;">برای دیدن امتیاز نهایی، هر ۴ مورد رو وارد کن</div>`; return; }
+    const label = factoryRatingLabel(score);
+    const color = RATING_COLORS[label] || '#857a69';
+    el.innerHTML = `<div style="font-size:13px;font-weight:700;color:${color};">امتیاز نهایی: <span class="price-mono">${score.toFixed(1)}</span> — ${label}</div>`;
+  };
+  ['f_ratingCut','f_ratingSab','f_ratingSort','f_ratingBehavior'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateRatingPreview);
+  });
+  updateRatingPreview();
 }
 
 function submitFactory() {
@@ -783,6 +992,10 @@ function submitFactory() {
     phone: document.getElementById('f_phone').value.trim(),
     contactName: document.getElementById('f_contactName').value.trim(),
     contactTitle: document.getElementById('f_contactTitle').value.trim(),
+    ratingCut: document.getElementById('f_ratingCut').value,
+    ratingSab: document.getElementById('f_ratingSab').value,
+    ratingSort: document.getElementById('f_ratingSort').value,
+    ratingBehavior: document.getElementById('f_ratingBehavior').value,
     notes: document.getElementById('f_notes').value.trim()
   });
 }
@@ -790,7 +1003,7 @@ function submitFactory() {
 function newEntryState(template) {
   const t = template || {};
   return {
-    localId: uid(), photo: null,
+    localId: uid(), photos: [],
     name: t.name || '', stoneType: t.stoneType || '', color: t.color || '', pattern: t.pattern || '',
     process: t.process || '', sort: t.sort || '', qadopa: t.qadopa || '',
     dimType: t.dimType || '', width: t.width || '', length: t.length || '', thickness: t.thickness || '',
@@ -808,10 +1021,8 @@ function entryBlockHTML(entry, idx, isEdit) {
       <div style="font-size:11px;color:#857a69;font-weight:600;">محصول ${idx + 1}</div>
       ${productEntries.length > 1 ? `<button type="button" class="mini-btn" data-action="removeEntry" data-entry="${id}">${icon('x',12,'#D08C74')}</button>` : ''}
     </div>` : ''}
-    <label class="photo-drop" id="photoDrop_${id}">
-      ${entry.photo ? `<img src="${entry.photo}">` : `<span style="display:flex;flex-direction:column;align-items:center;gap:4px;">${icon('camera',22)}<span style="font-size:12px;">افزودن عکس</span></span>`}
-      <input type="file" accept="image/*" id="p_photo_input_${id}">
-    </label>
+    <div class="field"><label>عکس‌ها (چند عکس از زوایای مختلف)</label></div>
+    ${photoRowHTML(entry)}
     <div class="field"><label>نام محصول *</label><input id="p_name_${id}" value="${esc(entry.name)}" placeholder="مثلاً مرمریت صلصالی"></div>
     <div class="field">
       <label>نوع سنگ</label>
@@ -843,18 +1054,42 @@ function entryBlockHTML(entry, idx, isEdit) {
   </div>`;
 }
 
+function photoRowHTML(entry) {
+  const id = entry.localId;
+  const photos = entry.photos || [];
+  const thumbs = photos.map((photo, i) => `
+    <div class="photo-thumb-item">
+      <img src="${photo}" data-action="openEntryPhoto" data-entry="${id}" data-idx="${i}">
+      <button type="button" class="photo-remove-btn" data-action="removePhoto" data-entry="${id}" data-idx="${i}">${icon('x',10,'#fff')}</button>
+    </div>`).join('');
+  return `<div class="photo-row" id="photoRow_${id}">
+    ${thumbs}
+    <label class="photo-add-tile">
+      ${icon('camera',20)}
+      <input type="file" accept="image/*" multiple id="p_photo_input_${id}">
+    </label>
+  </div>`;
+}
+
 function attachPhotoHandler(entryId) {
   const inputEl = document.getElementById('p_photo_input_' + entryId);
   if (!inputEl) return;
   inputEl.addEventListener('change', function photoChangeHandler(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    handlePhotoFile(file, (dataUrl) => {
-      const entry = productEntries.find(x => x.localId === entryId);
-      if (entry) entry.photo = dataUrl;
-      const drop = document.getElementById('photoDrop_' + entryId);
-      drop.innerHTML = `<img src="${dataUrl}"><input type="file" accept="image/*" id="p_photo_input_${entryId}">`;
-      attachPhotoHandler(entryId);
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const entry = productEntries.find(x => x.localId === entryId);
+    if (!entry) return;
+    let remaining = files.length;
+    files.forEach(file => {
+      handlePhotoFile(file, (dataUrl) => {
+        entry.photos.push(dataUrl);
+        remaining--;
+        if (remaining === 0) {
+          const row = document.getElementById('photoRow_' + entryId);
+          if (row) row.outerHTML = photoRowHTML(entry);
+          attachPhotoHandler(entryId);
+        }
+      });
     });
   });
 }
@@ -924,7 +1159,7 @@ function openProductModal(factoryId, editing) {
   productModalData = { factoryId, editing };
   if (editing) {
     productEntries = [{
-      localId: editing.id, photo: editing.photo, name: editing.name, stoneType: editing.stoneType,
+      localId: editing.id, photos: (editing.photos || []).slice(), name: editing.name, stoneType: editing.stoneType,
       color: editing.color, pattern: editing.pattern, process: editing.processType, sort: editing.sort,
       qadopa: editing.qadopa,
       dimType: editing.dimensionType, width: editing.width, length: editing.length, thickness: editing.thickness,
@@ -992,7 +1227,7 @@ function submitEntries() {
       checkMonths: g('p_checkMonths_' + id).trim(),
       priceValidityDays: g('p_priceValidity_' + id).trim(),
       notes: g('p_notes_' + id).trim(),
-      photo: entry.photo
+      photos: entry.photos || []
     });
     savedCount++;
   });
@@ -1050,6 +1285,36 @@ document.addEventListener('click', (e) => {
     case 'goFactories': view = 'factories'; render(); break;
     case 'openFactory': activeFactoryId = id; view = 'factory'; showInactive = false; render(); break;
     case 'openFactoryFromSearch': if (id) { activeFactoryId = id; view = 'factory'; searchQuery=''; showInactive = false; render(); } break;
+    case 'openProductDetail': activeProductId = id; productDetailFrom = view; view = 'productDetail'; render(); break;
+    case 'goBackFromDetail': view = productDetailFrom || 'search'; render(); break;
+    case 'openLightbox': {
+      const prod = products.find(x => x.id === id);
+      const idx = Number(t.getAttribute('data-idx') || 0);
+      if (prod) {
+        const photos = getProductPhotos(prod);
+        if (photos.length) openLightbox(photos, idx);
+      }
+      break;
+    }
+    case 'closeLightbox': closeLightbox(); break;
+    case 'lightboxNext': lightboxNext(); break;
+    case 'lightboxPrev': lightboxPrev(); break;
+    case 'noop': break;
+    case 'openEntryPhoto': {
+      const entry = productEntries.find(en => en.localId === entryId);
+      const idx = Number(t.getAttribute('data-idx') || 0);
+      if (entry && entry.photos && entry.photos.length) openLightbox(entry.photos, idx);
+      break;
+    }
+    case 'removePhoto': {
+      const entry = productEntries.find(en => en.localId === entryId);
+      const idx = Number(t.getAttribute('data-idx') || 0);
+      if (entry) entry.photos.splice(idx, 1);
+      const row = document.getElementById('photoRow_' + entryId);
+      if (row && entry) row.outerHTML = photoRowHTML(entry);
+      attachPhotoHandler(entryId);
+      break;
+    }
     case 'editFactory': openFactoryModal(factories.find(f => f.id === activeFactoryId)); break;
     case 'toggleInactive': showInactive = !showInactive; renderBody(); break;
     case 'toggleActive': toggleActive(id); break;
