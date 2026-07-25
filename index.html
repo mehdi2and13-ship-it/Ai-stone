@@ -164,7 +164,22 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1550.0.min.js"></script>
 <script>
+// ---------- Liara Object Storage config (for photo uploads) ----------
+const LIARA_ENDPOINT = 'https://storage.iran.liara.space';
+const LIARA_BUCKET = 'ai-stone-photos';
+AWS.config.update({
+  accessKeyId: 'buil4r5t1kvh3uaq',
+  secretAccessKey: 'e1eb4bda-e3f2-4a28-88e6-c5c7132be1be',
+  region: 'us-east-1'
+});
+const liaraS3 = new AWS.S3({
+  endpoint: new AWS.Endpoint(LIARA_ENDPOINT),
+  s3ForcePathStyle: true,
+  signatureVersion: 'v4'
+});
+
 // ---------- Firestore config & collection names ----------
 const COL_FACTORIES = 'factories';
 const COL_PRODUCTS = 'products';
@@ -471,18 +486,35 @@ function handlePhotoFile(file, cb) {
   reader.onload = (ev) => {
     const img = new Image();
     img.onload = () => {
-      const maxW = 480;
+      const maxW = 1600;
       const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      cb(canvas.toDataURL('image/jpeg', 0.6));
+      canvas.toBlob((blob) => {
+        uploadPhotoToLiara(blob, cb);
+      }, 'image/jpeg', 0.88);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+function uploadPhotoToLiara(blob, cb) {
+  const key = 'products/' + uid() + '.jpg';
+  showToast('در حال آپلود عکس...');
+  liaraS3.upload({
+    Bucket: LIARA_BUCKET,
+    Key: key,
+    Body: blob,
+    ContentType: 'image/jpeg',
+    ACL: 'public-read'
+  }, (err) => {
+    if (err) { showToast('آپلود عکس ناموفق بود'); return; }
+    cb(LIARA_ENDPOINT + '/' + LIARA_BUCKET + '/' + key);
+  });
 }
 
 function startVoice(targetInputId) {
