@@ -512,7 +512,10 @@ function uploadPhotoToLiara(blob, cb) {
     ContentType: 'image/jpeg',
     ACL: 'public-read'
   }, (err) => {
-    if (err) { showToast('آپلود عکس ناموفق بود'); return; }
+    if (err) {
+      alert('خطای آپلود:\n' + (err.code || '') + '\n' + (err.message || JSON.stringify(err)));
+      return;
+    }
     cb(LIARA_ENDPOINT + '/' + LIARA_BUCKET + '/' + key);
   });
 }
