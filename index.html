@@ -494,7 +494,9 @@ function handlePhotoFile(file, cb) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob((blob) => {
-        uploadPhotoToLiara(blob, cb);
+        blob.arrayBuffer().then((buf) => {
+          uploadPhotoToLiara(new Uint8Array(buf), cb);
+        });
       }, 'image/jpeg', 0.88);
     };
     img.src = ev.target.result;
@@ -502,14 +504,15 @@ function handlePhotoFile(file, cb) {
   reader.readAsDataURL(file);
 }
 
-function uploadPhotoToLiara(blob, cb) {
+function uploadPhotoToLiara(bytes, cb) {
   const key = 'products/' + uid() + '.jpg';
   showToast('در حال آپلود عکس...');
   liaraS3.upload({
     Bucket: LIARA_BUCKET,
     Key: key,
-    Body: blob,
+    Body: bytes,
     ContentType: 'image/jpeg',
+    ContentLength: bytes.length,
     ACL: 'public-read'
   }, (err) => {
     if (err) {
