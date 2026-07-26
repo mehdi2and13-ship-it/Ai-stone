@@ -164,26 +164,12 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1550.0.min.js"></script>
 <script>
-// ---------- Liara Object Storage config (for photo uploads) ----------
-const LIARA_ENDPOINT = 'https://storage.c2.liara.site';
-const LIARA_BUCKET = 'ai-stone-photos';
-AWS.config.update({
-  accessKeyId: 'buil4r5t1kvh3uaq',
-  secretAccessKey: 'e1eb4bda-e3f2-4a28-88e6-c5c7132be1be',
-  region: 'us-east-1'
-});
-const liaraS3 = new AWS.S3({
-  endpoint: new AWS.Endpoint(LIARA_ENDPOINT),
-  s3ForcePathStyle: true,
-  signatureVersion: 'v4',
-  s3DisableBodySigning: true
-});
-
 // ---------- Firestore config & collection names ----------
 const COL_FACTORIES = 'factories';
 const COL_PRODUCTS = 'products';
+const COL_PHOTOS = 'photos';
+const photoCache = {};
 const firebaseConfig = {
   apiKey: "AIzaSyC4_bJsF23BwxVSI3ChKr1tpZr-bn56_1o",
   authDomain: "ai-stone-5eb7f.firebaseapp.com",
@@ -325,9 +311,15 @@ function getProductPhotos(p) {
 function resolvePhotoSrc(photoRef) {
   if (!photoRef) return '';
   if (photoRef.indexOf('data:') === 0 || photoRef.indexOf('http') === 0) return photoRef;
-  try {
-    return liaraS3.getSignedUrl('getObject', { Bucket: LIARA_BUCKET, Key: photoRef, Expires: 3600 });
-  } catch (e) { return ''; }
+  if (photoCache[photoRef]) return photoCache[photoRef];
+  if (photoCache[photoRef] === undefined) {
+    photoCache[photoRef] = null;
+    db.collection(COL_PHOTOS).doc(photoRef).get().then((doc) => {
+      photoCache[photoRef] = (doc.exists && doc.data().data) ? doc.data().data : '';
+      render();
+    }).catch(() => { photoCache[photoRef] = ''; });
+  }
+  return '';
 }
 
 const RATING_COLORS = {
@@ -495,40 +487,27 @@ function handlePhotoFile(file, cb) {
   reader.onload = (ev) => {
     const img = new Image();
     img.onload = () => {
-      const maxW = 1600;
+      const maxW = 480;
       const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        blob.arrayBuffer().then((buf) => {
-          uploadPhotoToLiara(new Uint8Array(buf), cb);
-        });
-      }, 'image/jpeg', 0.88);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      savePhotoToFirestore(dataUrl, cb);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function uploadPhotoToLiara(bytes, cb) {
-  const key = 'products/' + uid() + '.jpg';
-  showToast('در حال آپلود عکس...');
-  liaraS3.putObject({
-    Bucket: LIARA_BUCKET,
-    Key: key,
-    Body: bytes,
-    ContentType: 'image/jpeg',
-    ACL: 'public-read'
-  }, (err) => {
-    if (err) {
-      alert('خطای آپلود:\n' + (err.code || '') + '\n' + (err.message || JSON.stringify(err)));
-      return;
-    }
-    cb(key);
-  });
+function savePhotoToFirestore(dataUrl, cb) {
+  showToast('در حال ذخیرهٔ عکس...');
+  db.collection(COL_PHOTOS).add({ data: dataUrl, createdAt: todayISO() }).then((doc) => {
+    photoCache[doc.id] = dataUrl;
+    cb(doc.id);
+  }).catch(() => { showToast('ذخیرهٔ عکس ناموفق بود'); });
 }
 
 function startVoice(targetInputId) {
