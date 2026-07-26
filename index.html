@@ -322,6 +322,14 @@ function getProductPhotos(p) {
   return [];
 }
 
+function resolvePhotoSrc(photoRef) {
+  if (!photoRef) return '';
+  if (photoRef.indexOf('data:') === 0 || photoRef.indexOf('http') === 0) return photoRef;
+  try {
+    return liaraS3.getSignedUrl('getObject', { Bucket: LIARA_BUCKET, Key: photoRef, Expires: 3600 });
+  } catch (e) { return ''; }
+}
+
 const RATING_COLORS = {
   'خیلی ضعیف': '#D14343',
   'ضعیف': '#D08C74',
@@ -358,7 +366,7 @@ function productThumbHTML(p, cls) {
     return `<div class="${cls}" style="position:relative;background:${swatchFor(p.stoneType||p.name)}"></div>`;
   }
   return `<div class="${cls}" data-action="openLightbox" data-id="${p.id}" data-idx="0" style="position:relative;cursor:pointer;">
-    <img src="${photos[0]}" style="width:100%;height:100%;object-fit:cover;">
+    <img src="${resolvePhotoSrc(photos[0])}" style="width:100%;height:100%;object-fit:cover;">
     ${photos.length > 1 ? `<span class="photo-count-badge">+${photos.length - 1}</span>` : ''}
   </div>`;
 }
@@ -519,7 +527,7 @@ function uploadPhotoToLiara(bytes, cb) {
       alert('خطای آپلود:\n' + (err.code || '') + '\n' + (err.message || JSON.stringify(err)));
       return;
     }
-    cb(LIARA_ENDPOINT + '/' + LIARA_BUCKET + '/' + key);
+    cb(key);
   });
 }
 
@@ -741,7 +749,7 @@ function renderBody() {
         : `${esc(p.width)}×${esc(p.length)}`;
       let html = '';
       if (photos.length) {
-        html += `<div class="detail-gallery">${photos.map((ph, idx) => `<img src="${ph}" class="detail-gallery-img" data-action="openLightbox" data-id="${p.id}" data-idx="${idx}">`).join('')}</div>`;
+        html += `<div class="detail-gallery">${photos.map((ph, idx) => `<img src="${resolvePhotoSrc(ph)}" class="detail-gallery-img" data-action="openLightbox" data-id="${p.id}" data-idx="${idx}">`).join('')}</div>`;
       } else {
         html += `<div style="width:100%;height:160px;border-radius:16px;background:${swatchFor(p.stoneType||p.name)};margin-bottom:14px;"></div>`;
       }
@@ -941,7 +949,7 @@ function renderLightbox() {
   const total = lightboxPhotos.length;
   root.innerHTML = `<div class="lightbox-overlay" data-action="closeLightbox">
     <button class="lightbox-close" data-action="closeLightbox">${icon('x',16,'#fff')}</button>
-    <img src="${lightboxPhotos[lightboxIndex]}" data-action="noop">
+    <img src="${resolvePhotoSrc(lightboxPhotos[lightboxIndex])}" data-action="noop">
     ${total > 1 ? `
       <button class="lightbox-nav lightbox-prev" data-action="lightboxPrev">${icon('chevronRight',20,'#fff')}</button>
       <button class="lightbox-nav lightbox-next" data-action="lightboxNext">${icon('chevronLeft',20,'#fff')}</button>
@@ -1097,7 +1105,7 @@ function photoRowHTML(entry) {
   const photos = entry.photos || [];
   const thumbs = photos.map((photo, i) => `
     <div class="photo-thumb-item">
-      <img src="${photo}" data-action="openEntryPhoto" data-entry="${id}" data-idx="${i}">
+      <img src="${resolvePhotoSrc(photo)}" data-action="openEntryPhoto" data-entry="${id}" data-idx="${i}">
       <button type="button" class="photo-remove-btn" data-action="removePhoto" data-entry="${id}" data-idx="${i}">${icon('x',10,'#fff')}</button>
     </div>`).join('');
   return `<div class="photo-row" id="photoRow_${id}">
