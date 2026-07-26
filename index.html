@@ -177,7 +177,8 @@ AWS.config.update({
 const liaraS3 = new AWS.S3({
   endpoint: new AWS.Endpoint(LIARA_ENDPOINT),
   s3ForcePathStyle: true,
-  signatureVersion: 'v4'
+  signatureVersion: 'v4',
+  s3DisableBodySigning: true
 });
 
 // ---------- Firestore config & collection names ----------
