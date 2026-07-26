@@ -507,12 +507,11 @@ function handlePhotoFile(file, cb) {
 function uploadPhotoToLiara(bytes, cb) {
   const key = 'products/' + uid() + '.jpg';
   showToast('در حال آپلود عکس...');
-  liaraS3.upload({
+  liaraS3.putObject({
     Bucket: LIARA_BUCKET,
     Key: key,
     Body: bytes,
     ContentType: 'image/jpeg',
-    ContentLength: bytes.length,
     ACL: 'public-read'
   }, (err) => {
     if (err) {
