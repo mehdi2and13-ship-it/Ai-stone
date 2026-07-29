@@ -168,8 +168,6 @@
 // ---------- Firestore config & collection names ----------
 const COL_FACTORIES = 'factories';
 const COL_PRODUCTS = 'products';
-const COL_PHOTOS = 'photos';
-const photoCache = {};
 const firebaseConfig = {
   apiKey: "AIzaSyC4_bJsF23BwxVSI3ChKr1tpZr-bn56_1o",
   authDomain: "ai-stone-5eb7f.firebaseapp.com",
@@ -309,17 +307,7 @@ function getProductPhotos(p) {
 }
 
 function resolvePhotoSrc(photoRef) {
-  if (!photoRef) return '';
-  if (photoRef.indexOf('data:') === 0 || photoRef.indexOf('http') === 0) return photoRef;
-  if (photoCache[photoRef]) return photoCache[photoRef];
-  if (photoCache[photoRef] === undefined) {
-    photoCache[photoRef] = null;
-    db.collection(COL_PHOTOS).doc(photoRef).get().then((doc) => {
-      photoCache[photoRef] = (doc.exists && doc.data().data) ? doc.data().data : '';
-      render();
-    }).catch(() => { photoCache[photoRef] = ''; });
-  }
-  return '';
+  return photoRef || '';
 }
 
 const RATING_COLORS = {
@@ -495,19 +483,11 @@ function handlePhotoFile(file, cb) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      savePhotoToFirestore(dataUrl, cb);
+      cb(dataUrl);
     };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
-}
-
-function savePhotoToFirestore(dataUrl, cb) {
-  showToast('در حال ذخیرهٔ عکس...');
-  db.collection(COL_PHOTOS).add({ data: dataUrl, createdAt: todayISO() }).then((doc) => {
-    photoCache[doc.id] = dataUrl;
-    cb(doc.id);
-  }).catch(() => { showToast('ذخیرهٔ عکس ناموفق بود'); });
 }
 
 function startVoice(targetInputId) {
