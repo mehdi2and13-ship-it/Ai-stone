@@ -102,6 +102,7 @@
 
   #modalRoot { position: absolute; inset: 0; z-index: 30; display: none; }
   #lightboxRoot { position: absolute; inset: 0; z-index: 60; display: none; }
+  #loginRoot { position: absolute; inset: 0; z-index: 80; background: #171410; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
   .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: flex-end; }
   .modal-sheet { background: #1E1A15; border-top: 1px solid #332c22; width: 100%; border-radius: 24px 24px 0 0; padding: 20px; max-height: 92%; overflow-y: auto; }
   .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -159,11 +160,13 @@
   <div id="bottomnav"></div>
   <div id="modalRoot"></div>
   <div id="lightboxRoot"></div>
+  <div id="loginRoot"></div>
   <div id="toast"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 // ---------- Firestore config & collection names ----------
 const COL_FACTORIES = 'factories';
@@ -384,17 +387,80 @@ function icon(name, size = 18, color = 'currentColor') {
     case 'factory': return wrap(`<path d="M4 20V11l5 3v-3l5 3V8l6 3v9H4z"/>`);
     case 'alert': return wrap(`<path d="M12 3l9 17H3z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/>`);
     case 'chevronRight': return wrap(`<path d="M9 6l6 6-6 6"/>`);
+    case 'trash': return wrap(`<path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6"/><path d="M14 11v6"/>`);
     default: return '';
   }
 }
 
-// ---------- storage (Firebase Firestore, real-time sync) ----------
-function loadData() {
-  try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-  } catch (e) { showToast('اتصال به دیتابیس ناموفق بود'); return; }
+// ---------- authentication ----------
+function initAuth() {
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      hideLoginScreen();
+      loadData();
+    } else {
+      loaded = false;
+      showLoginScreen();
+    }
+  });
+}
 
+function showLoginScreen() {
+  const root = document.getElementById('loginRoot');
+  root.style.display = 'flex';
+  root.innerHTML = `
+    <div style="width:100%;max-width:280px;">
+      <div class="eyebrow" style="text-align:center;margin-bottom:4px;">CAPITAL STONE</div>
+      <div style="font-size:20px;font-weight:700;color:#EDE6D8;text-align:center;margin-bottom:24px;">ورود به AI Stone</div>
+      <div class="field"><label>ایمیل</label><input id="login_email" type="email" placeholder="you@example.com"></div>
+      <div class="field"><label>رمز عبور</label><input id="login_password" type="password" placeholder="••••••••"></div>
+      <div id="loginError" style="color:#D14343;font-size:12px;margin-bottom:10px;"></div>
+      <button class="save-btn" data-action="doLogin">ورود</button>
+    </div>`;
+  const pwInput = document.getElementById('login_password');
+  pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+}
+
+function hideLoginScreen() {
+  document.getElementById('loginRoot').style.display = 'none';
+}
+
+function doLogin() {
+  const email = document.getElementById('login_email').value.trim();
+  const password = document.getElementById('login_password').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'ایمیل و رمز عبور را وارد کنید'; return; }
+  firebase.auth().signInWithEmailAndPassword(email, password).catch(() => {
+    errEl.textContent = 'ایمیل یا رمز عبور اشتباه است';
+  });
+}
+
+// ---------- Android back button: confirm before exiting ----------
+function setupExitGuard() {
+  history.pushState({ appGuard: true }, '', '');
+  window.addEventListener('popstate', () => {
+    if (view !== 'home') {
+      view = 'home';
+      render();
+      history.pushState({ appGuard: true }, '', '');
+      return;
+    }
+    if (confirm('آیا می‌خواهید از برنامه خارج شوید؟')) {
+      window.close();
+    } else {
+      history.pushState({ appGuard: true }, '', '');
+    }
+  });
+}
+
+// ---------- storage (Firebase Firestore, real-time sync) ----------
+function initFirebase() {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+}
+
+function loadData() {
   db.collection(COL_FACTORIES).onSnapshot((snap) => {
     factories = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
     factoriesLoadedOnce = true;
@@ -688,7 +754,7 @@ function renderBody() {
           </div>
           <div class="actions-col">
             <button class="mini-btn" data-action="editProduct" data-id="${p.id}">${icon('edit',12,'#EDE6D8')}</button>
-            <button class="mini-btn" data-action="toggleActive" data-id="${p.id}">${p.active ? icon('eyeOff',12,'#D08C74') : icon('check',12,'#8FB39A')}</button>
+            <button class="mini-btn" data-action="confirmDeleteProduct" data-id="${p.id}">${icon('trash',12,'#D08C74')}</button>
           </div>
         </div>`;
       }).join('');
@@ -874,10 +940,38 @@ function render() {
 }
 
 // ---------- modals ----------
+let pendingDeleteProductId = null;
 function closeModal() {
   factoryModalData = null; productModalData = null; productEntries = []; historyModalProduct = null;
+  pendingDeleteProductId = null;
   document.getElementById('modalRoot').style.display = 'none';
   document.getElementById('modalRoot').innerHTML = '';
+}
+
+function openConfirmDeleteProduct(id) {
+  pendingDeleteProductId = id;
+  const root = document.getElementById('modalRoot');
+  root.style.display = 'block';
+  root.innerHTML = `
+    <div class="modal-overlay" data-action="closeModalBg">
+      <div class="modal-sheet" style="max-height:40%;">
+        <div class="modal-head"><div class="t">حذف محصول</div><button data-action="closeModal">${icon('x',18)}</button></div>
+        <div style="font-size:13px;color:#EDE6D8;margin-bottom:20px;line-height:1.8;">آیا مطمئن هستید می‌خواهید این محصول را حذف کنید؟ این عمل قابل بازگشت نیست.</div>
+        <div class="row2">
+          <button class="save-btn" style="background:#262119;color:#EDE6D8;" data-action="closeModal">خیر</button>
+          <button class="save-btn" style="background:#D14343;" data-action="deleteProductConfirmed">بله، حذف کن</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function deleteProductConfirmed() {
+  if (!pendingDeleteProductId) return;
+  const id = pendingDeleteProductId;
+  db.collection(COL_PRODUCTS).doc(id).delete()
+    .then(() => showToast('محصول حذف شد'))
+    .catch(() => showToast('حذف ناموفق بود'));
+  closeModal();
 }
 
 let lightboxPhotos = [];
@@ -1323,6 +1417,9 @@ document.addEventListener('click', (e) => {
     case 'editFactory': openFactoryModal(factories.find(f => f.id === activeFactoryId)); break;
     case 'toggleInactive': showInactive = !showInactive; renderBody(); break;
     case 'toggleActive': toggleActive(id); break;
+    case 'confirmDeleteProduct': openConfirmDeleteProduct(id); break;
+    case 'deleteProductConfirmed': deleteProductConfirmed(); break;
+    case 'doLogin': doLogin(); break;
     case 'editProduct': openProductModal(activeFactoryId, products.find(p => p.id === id)); break;
     case 'showHistory': openHistoryModal(products.find(p => p.id === id)); break;
     case 'openAdd': view === 'factory' ? openProductModal(activeFactoryId, null) : openFactoryModal({}); break;
@@ -1382,7 +1479,9 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------- init ----------
-loadData();
+initFirebase();
+setupExitGuard();
+loadData(); // login gate (initAuth) intentionally not enabled yet — see /* AUTH GATE */ below
 </script>
 </body>
 </html>
