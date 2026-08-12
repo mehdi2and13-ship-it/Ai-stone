@@ -204,6 +204,9 @@ let filterSort = '';
 let filterProcess = '';
 let filterDimType = '';
 let activeProductId = null;
+let factoriesSearchQuery = '';
+let scrollPositions = {};
+let searchModeFactory = false;
 let productDetailFrom = 'search';
 
 let factoryModalData = null;
@@ -572,6 +575,28 @@ function startVoice(targetInputId) {
   rec.start();
 }
 
+let activeRecognition = null;
+function startVoiceRecording(targetInputId) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { showToast('جستجوی صوتی پشتیبانی نمی‌شود'); return; }
+  if (activeRecognition) return;
+  const rec = new SR();
+  rec.lang = 'fa-IR';
+  activeRecognition = rec;
+  rec.onstart = () => { listening = true; render(); };
+  rec.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    if (targetInputId === 'searchInput') { searchQuery = text; view = 'search'; render(); }
+    else { const el = document.getElementById(targetInputId); if (el) { el.value = text; el.dispatchEvent(new Event('input')); } }
+  };
+  rec.onerror = () => { listening = false; activeRecognition = null; render(); };
+  rec.onend = () => { listening = false; activeRecognition = null; render(); };
+  rec.start();
+}
+function stopVoiceRecording() {
+  if (activeRecognition) { try { activeRecognition.stop(); } catch (e) {} }
+}
+
 // ---------- render: topbar ----------
 function renderTopbar() {
   const el = document.getElementById('topbar');
@@ -615,9 +640,9 @@ function renderTopbar() {
     el.innerHTML = `
       <button class="icon-btn" data-action="goHome">${icon('arrowRight',17)}</button>
       <div id="searchBox">
-        <input id="searchInput" placeholder="نام سنگ، کارخانه یا منطقه..." value="${esc(searchQuery)}" />
+        <input id="searchInput" placeholder="${listening ? 'در حال ضبط صدا...' : 'نام سنگ، کارخانه یا منطقه...'}" value="${esc(searchQuery)}" />
       </div>
-      <button class="icon-btn ${listening ? 'active' : ''}" data-action="voiceSearch">${icon('mic',16)}</button>
+      <button class="icon-btn ${listening ? 'active' : ''}" data-voice-hold data-target="searchInput">${icon('mic',16)}</button>
     `;
     const input = document.getElementById('searchInput');
     input.focus();
@@ -641,9 +666,9 @@ function renderBody() {
           <div class="ring r1 pulse"></div>
           <div class="ring r2 pulse" style="animation-delay:.4s"></div>
           <div class="ring r3"></div>
-          <button id="micBtn" class="${listening ? 'listening' : ''}" data-action="voiceHome">${icon('mic',24,'#171410')}</button>
+          <button id="micBtn" class="${listening ? 'listening' : ''}" data-voice-hold data-target="searchInput">${icon('mic',24,'#171410')}</button>
         </div>
-        <div class="voice-hint">بگو دنبال چه سنگی می‌گردی</div>
+        <div class="voice-hint">${listening ? 'در حال ضبط... انگشتتان را بردارید' : 'نگه دارید و بگویید دنبال چه سنگی می‌گردید'}</div>
       </div>
       <div class="text-search">
         ${icon('search',15,'#6f6558')}
@@ -693,27 +718,20 @@ function renderBody() {
         </button>`;
       }).join('');
     }
+    restoreScrollIfNeeded('recent', el);
   }
 
   else if (view === 'factories') {
-    if (factories.length === 0) {
-      el.innerHTML = emptyState('factory', 'هنوز کارخانه‌ای ثبت نشده', 'با دکمهٔ + یک کارخانه اضافه کن تا محصولاتش رو ثبت کنی.');
-    } else {
-      el.innerHTML = factories.map(f => {
-        const count = products.filter(p => p.factoryId === f.id && p.active).length;
-        return `
-          <button class="card" data-action="openFactory" data-id="${f.id}">
-            <div class="swatch" style="background:${swatchFor(f.name)}">${icon('factory',18,'rgba(255,255,255,0.9)')}</div>
-            <div class="grow">
-              <div class="title-sm">${esc(f.name)}</div>
-              <div class="sub-sm">${icon('mapPin',11)} ${esc(f.location) || 'بدون آدرس'}</div>
-              ${factoryRatingBadgeHTML(f) ? `<div style="margin-top:4px;">${factoryRatingBadgeHTML(f)}</div>` : ''}
-            </div>
-            <div class="badge price-mono">${count}</div>
-            ${icon('chevronLeft',16,'#6f6558')}
-          </button>`;
-      }).join('');
-    }
+    let html = `<div class="text-search" style="margin:0 0 14px;">
+      ${icon('search',15,'#6f6558')}
+      <input id="factoriesSearchInput" placeholder="جستجوی نام کارخانه..." value="${esc(factoriesSearchQuery)}">
+    </div>`;
+    html += `<div id="factoriesListWrap"></div>`;
+    el.innerHTML = html;
+    const fsInput = document.getElementById('factoriesSearchInput');
+    fsInput.addEventListener('input', (e) => { factoriesSearchQuery = e.target.value; renderFactoriesListOnly(); });
+    renderFactoriesListOnly();
+    restoreScrollIfNeeded('factories', el);
   }
 
   else if (view === 'factory') {
@@ -821,6 +839,7 @@ function renderBody() {
       <button class="filter-chip ${sortMode==='alpha'?'active':''}" data-action="setSort" data-sort="alpha">الفبا</button>
       <button class="filter-chip ${showPriceFilter?'active':''}" data-action="togglePriceFilter">بازه قیمت</button>
       <button class="filter-chip ${showAttrFilter?'active':''}" data-action="toggleAttrFilter">فیلترهای دقیق</button>
+      <button class="filter-chip ${searchModeFactory?'active':''}" data-action="toggleFactoryMode">کارخانه تولید‌کننده</button>
     </div>` + (showPriceFilter ? `<div class="row2" style="margin-bottom:12px;">
       <div class="field" style="margin-bottom:0;"><label>حداقل قیمت (تومان)</label><input id="priceMinInput" value="${formatThousands(priceMin)}" inputmode="numeric" placeholder="مثلاً 1.000.000"></div>
       <div class="field" style="margin-bottom:0;"><label>حداکثر قیمت (تومان)</label><input id="priceMaxInput" value="${formatThousands(priceMax)}" inputmode="numeric" placeholder="مثلاً 1.500.000"></div>
@@ -849,6 +868,7 @@ function renderBody() {
       });
     }
     renderSearchResultsOnly();
+    restoreScrollIfNeeded('search', el);
   }
 }
 
@@ -904,6 +924,24 @@ function renderSearchResultsOnly() {
   else results.sort((a,b) => b.p.lastPriceDate.localeCompare(a.p.lastPriceDate));
   const hasAnyFilter = tokens.length || filterStoneType || filterColor || filterPattern || filterSort || filterProcess || filterDimType || priceMin !== '' || priceMax !== '';
   if (!hasAnyFilter) { wrap.innerHTML = `<div style="text-align:center;color:#857a69;font-size:12px;margin-top:24px;">نام سنگ، هر مشخصه (نوع، رنگ، طرح، سورت، فرآوری، ابعاد) یا نام/منطقهٔ کارخانه رو بنویس، یا با میکروفون بگو</div>`; return; }
+  if (searchModeFactory) {
+    const seen = {};
+    const factoryList = [];
+    results.forEach(({f}) => { if (f && !seen[f.id]) { seen[f.id] = true; factoryList.push(f); } });
+    if (factoryList.length === 0) { wrap.innerHTML = emptyState('search', 'کارخانه‌ای پیدا نشد', 'عبارت یا فیلتر دیگه‌ای رو امتحان کن.'); return; }
+    wrap.innerHTML = factoryList.map(f => `
+      <button class="card" data-action="openFactoryFromSearch" data-id="${f.id}">
+        <div class="swatch" style="background:${swatchFor(f.name)}">${icon('factory',18,'rgba(255,255,255,0.9)')}</div>
+        <div class="grow">
+          <div class="title-sm">${esc(f.name)}</div>
+          <div class="sub-sm">${icon('mapPin',11)} ${esc(f.location) || 'بدون آدرس'}</div>
+          ${factoryRatingBadgeHTML(f) ? `<div style="margin-top:4px;">${factoryRatingBadgeHTML(f)}</div>` : ''}
+          ${f.phone ? `<div class="sub-sm">${icon('phone',10)} ${esc(f.phone)}${f.contactName ? ' · ' + esc(f.contactName) : ''}</div>` : ''}
+        </div>
+        ${icon('chevronLeft',16,'#6f6558')}
+      </button>`).join('');
+    return;
+  }
   if (results.length === 0) { wrap.innerHTML = emptyState('search', 'چیزی پیدا نشد', 'عبارت یا فیلتر دیگه‌ای رو امتحان کن.'); return; }
   wrap.innerHTML = results.map(({p,f}) => `
     <button class="card" data-action="openProductDetail" data-id="${p.id}">
@@ -921,6 +959,43 @@ function renderSearchResultsOnly() {
 
 function emptyState(iconName, title, desc) {
   return `<div class="empty"><div class="ic">${icon(iconName,26)}</div><div class="t">${title}</div><div class="d">${desc}</div></div>`;
+}
+
+function renderFactoriesListOnly() {
+  const wrap = document.getElementById('factoriesListWrap');
+  if (!wrap) return;
+  const q = factoriesSearchQuery.trim().toLowerCase();
+  const filtered = q
+    ? factories.filter(f => (f.name || '').toLowerCase().includes(q) || (f.location || '').toLowerCase().includes(q))
+    : factories;
+  if (factories.length === 0) {
+    wrap.innerHTML = emptyState('factory', 'هنوز کارخانه‌ای ثبت نشده', 'با دکمهٔ + یک کارخانه اضافه کن تا محصولاتش رو ثبت کنی.');
+  } else if (filtered.length === 0) {
+    wrap.innerHTML = emptyState('search', 'چیزی پیدا نشد', 'نام دیگه‌ای رو امتحان کن.');
+  } else {
+    wrap.innerHTML = filtered.map(f => {
+      const count = products.filter(p => p.factoryId === f.id && p.active).length;
+      return `
+        <button class="card" data-action="openFactory" data-id="${f.id}">
+          <div class="swatch" style="background:${swatchFor(f.name)}">${icon('factory',18,'rgba(255,255,255,0.9)')}</div>
+          <div class="grow">
+            <div class="title-sm">${esc(f.name)}</div>
+            <div class="sub-sm">${icon('mapPin',11)} ${esc(f.location) || 'بدون آدرس'}</div>
+            ${factoryRatingBadgeHTML(f) ? `<div style="margin-top:4px;">${factoryRatingBadgeHTML(f)}</div>` : ''}
+          </div>
+          <div class="badge price-mono">${count}</div>
+          ${icon('chevronLeft',16,'#6f6558')}
+        </button>`;
+    }).join('');
+  }
+}
+
+function restoreScrollIfNeeded(viewName, el) {
+  if (scrollPositions[viewName] !== undefined) {
+    const pos = scrollPositions[viewName];
+    delete scrollPositions[viewName];
+    requestAnimationFrame(() => { el.scrollTop = pos; });
+  }
 }
 
 // ---------- render: bottom nav ----------
@@ -1370,6 +1445,16 @@ function openHistoryModal(product) {
     </div>`;
 }
 
+// ---------- press-and-hold voice recording ----------
+document.addEventListener('pointerdown', (e) => {
+  const t = e.target.closest('[data-voice-hold]');
+  if (!t) return;
+  e.preventDefault();
+  startVoiceRecording(t.getAttribute('data-target'));
+});
+document.addEventListener('pointerup', () => { stopVoiceRecording(); });
+document.addEventListener('pointercancel', () => { stopVoiceRecording(); });
+
 // ---------- delegated click handling ----------
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-action]');
@@ -1382,9 +1467,9 @@ document.addEventListener('click', (e) => {
     case 'goSearch': view = 'search'; render(); break;
     case 'goRecent': view = 'recent'; render(); break;
     case 'goFactories': view = 'factories'; render(); break;
-    case 'openFactory': activeFactoryId = id; view = 'factory'; showInactive = false; render(); break;
-    case 'openFactoryFromSearch': if (id) { activeFactoryId = id; view = 'factory'; searchQuery=''; showInactive = false; render(); } break;
-    case 'openProductDetail': activeProductId = id; productDetailFrom = view; view = 'productDetail'; render(); break;
+    case 'openFactory': scrollPositions[view] = document.getElementById('bodyArea').scrollTop; activeFactoryId = id; view = 'factory'; showInactive = false; render(); break;
+    case 'openFactoryFromSearch': if (id) { scrollPositions[view] = document.getElementById('bodyArea').scrollTop; activeFactoryId = id; view = 'factory'; searchQuery=''; showInactive = false; render(); } break;
+    case 'openProductDetail': scrollPositions[view] = document.getElementById('bodyArea').scrollTop; activeProductId = id; productDetailFrom = view; view = 'productDetail'; render(); break;
     case 'goBackFromDetail': view = productDetailFrom || 'search'; render(); break;
     case 'openLightbox': {
       const prod = products.find(x => x.id === id);
@@ -1441,12 +1526,11 @@ document.addEventListener('click', (e) => {
       renderProductEntriesModal();
       break;
     }
-    case 'voiceSearch': startVoice('searchInput'); break;
-    case 'voiceHome': startVoice('searchInput'); break;
     case 'voiceStone': startVoice('p_custom_stoneType_' + entryId); break;
     case 'setSort': sortMode = t.getAttribute('data-sort'); renderBody(); break;
     case 'togglePriceFilter': showPriceFilter = !showPriceFilter; renderBody(); break;
     case 'toggleAttrFilter': showAttrFilter = !showAttrFilter; renderBody(); break;
+    case 'toggleFactoryMode': searchModeFactory = !searchModeFactory; renderBody(); break;
     case 'selectChip': {
       const field = t.getAttribute('data-field');
       const value = t.getAttribute('data-value');
