@@ -171,6 +171,7 @@
 // ---------- Firestore config & collection names ----------
 const COL_FACTORIES = 'factories';
 const COL_PRODUCTS = 'products';
+const COL_PRODUCT_PHOTOS = 'productPhotos';
 const firebaseConfig = {
   apiKey: "AIzaSyC4_bJsF23BwxVSI3ChKr1tpZr-bn56_1o",
   authDomain: "ai-stone-5eb7f.firebaseapp.com",
@@ -306,10 +307,41 @@ function renderDimDetail(entryId, dimType, existing) {
   });
 }
 
+const fullPhotosCache = {};
+let pendingLightboxRequest = null;
 function getProductPhotos(p) {
+  // legacy records (saved before this change) already carry full photos inline — no fetch needed
+  if (p.photos && p.photos.length) return p.photos;
+  if (p.photo) return [p.photo];
+  // newer records: full photos live in a separate collection, fetched only when actually needed
+  if (fullPhotosCache[p.id]) return fullPhotosCache[p.id];
+  if (fullPhotosCache[p.id] === undefined) {
+    fullPhotosCache[p.id] = null;
+    db.collection(COL_PRODUCT_PHOTOS).doc(p.id).get().then((doc) => {
+      fullPhotosCache[p.id] = (doc.exists && doc.data().photos) ? doc.data().photos : [];
+      if (pendingLightboxRequest && pendingLightboxRequest.productId === p.id) {
+        const req = pendingLightboxRequest;
+        pendingLightboxRequest = null;
+        if (fullPhotosCache[p.id].length) openLightbox(fullPhotosCache[p.id], req.idx);
+      }
+      render();
+    }).catch(() => { fullPhotosCache[p.id] = []; });
+  }
+  return [];
+}
+
+function getProductPhotoThumbs(p) {
+  if (p.photoThumbs && p.photoThumbs.length) return p.photoThumbs;
   if (p.photos && p.photos.length) return p.photos;
   if (p.photo) return [p.photo];
   return [];
+}
+
+function getProductPhotoCount(p) {
+  if (typeof p.photoCount === 'number') return p.photoCount;
+  if (p.photos && p.photos.length) return p.photos.length;
+  if (p.photo) return 1;
+  return 0;
 }
 
 function resolvePhotoSrc(photoRef) {
@@ -347,13 +379,14 @@ function factoryRatingBadgeHTML(f) {
 }
 
 function productThumbHTML(p, cls) {
-  const photos = getProductPhotos(p);
-  if (!photos.length) {
+  const thumbs = getProductPhotoThumbs(p);
+  const count = getProductPhotoCount(p);
+  if (!thumbs.length) {
     return `<div class="${cls}" style="position:relative;background:${swatchFor(p.stoneType||p.name)}"></div>`;
   }
   return `<div class="${cls}" data-action="openLightbox" data-id="${p.id}" data-idx="0" style="position:relative;cursor:pointer;">
-    <img src="${resolvePhotoSrc(photos[0])}" style="width:100%;height:100%;object-fit:cover;">
-    ${photos.length > 1 ? `<span class="photo-count-badge">+${photos.length - 1}</span>` : ''}
+    <img src="${resolvePhotoSrc(thumbs[0])}" style="width:100%;height:100%;object-fit:cover;">
+    ${count > 1 ? `<span class="photo-count-badge">+${count - 1}</span>` : ''}
   </div>`;
 }
 
@@ -509,15 +542,24 @@ function saveFactory(data) {
 }
 
 function saveProductSingle(data) {
+  const photosFull = data.photos || [];
+  const photoThumbs = data.photoThumbs || [];
+  const photoCount = photosFull.length;
+
   if (data.id) {
     const existing = products.find(p => p.id === data.id) || {};
     const priceChanged = Number(data.priceCash) !== Number(existing.priceCash) || Number(data.priceCheck || 0) !== Number(existing.priceCheck || 0);
     const priceHistory = existing.priceHistory || [];
     const newHistory = priceChanged ? [...priceHistory, { priceCash: existing.priceCash || 0, priceCheck: existing.priceCheck || '', checkMonths: existing.checkMonths || '', date: existing.lastPriceDate || existing.createdAt }] : priceHistory;
-    const payload = Object.assign({}, data, { priceHistory: newHistory, lastPriceDate: priceChanged ? todayISO() : existing.lastPriceDate });
+    const payload = Object.assign({}, data, { priceHistory: newHistory, lastPriceDate: priceChanged ? todayISO() : existing.lastPriceDate, photoThumbs, photoCount });
     delete payload.id;
+    delete payload.photos;
     db.collection(COL_PRODUCTS).doc(data.id).update(payload).catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+    db.collection(COL_PRODUCT_PHOTOS).doc(data.id).set({ photos: photosFull }).then(() => {
+      fullPhotosCache[data.id] = photosFull;
+    }).catch(() => {});
   } else {
+    const docRef = db.collection(COL_PRODUCTS).doc();
     const payload = {
       factoryId: data.factoryId, name: data.name, stoneType: data.stoneType||'',
       color: data.color||'', pattern: data.pattern||'', processType: data.processType||'',
@@ -526,10 +568,13 @@ function saveProductSingle(data) {
       spoutLength: data.spoutLength||'', spoutShape: data.spoutShape||'',
       unit: data.unit||'م.م', priceCash: data.priceCash||0, priceCheck: data.priceCheck||'', checkMonths: data.checkMonths||'',
       priceValidityDays: data.priceValidityDays||'',
-      photos: data.photos||[], notes: data.notes||'',
+      photoThumbs, photoCount, notes: data.notes||'',
       active: true, createdAt: todayISO(), lastPriceDate: todayISO(), priceHistory: []
     };
-    db.collection(COL_PRODUCTS).add(payload).catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+    docRef.set(payload).catch(() => showToast('ذخیره‌سازی ناموفق بود'));
+    db.collection(COL_PRODUCT_PHOTOS).doc(docRef.id).set({ photos: photosFull }).then(() => {
+      fullPhotosCache[docRef.id] = photosFull;
+    }).catch(() => {});
   }
 }
 
@@ -552,7 +597,17 @@ function handlePhotoFile(file, cb) {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      cb(dataUrl);
+
+      const thumbW = 64;
+      const thumbScale = Math.min(1, thumbW / img.width);
+      const tCanvas = document.createElement('canvas');
+      tCanvas.width = Math.round(img.width * thumbScale);
+      tCanvas.height = Math.round(img.height * thumbScale);
+      const tCtx = tCanvas.getContext('2d');
+      tCtx.drawImage(img, 0, 0, tCanvas.width, tCanvas.height);
+      const thumbUrl = tCanvas.toDataURL('image/jpeg', 0.4);
+
+      cb(dataUrl, thumbUrl);
     };
     img.src = ev.target.result;
   };
@@ -1046,6 +1101,7 @@ function deleteProductConfirmed() {
   db.collection(COL_PRODUCTS).doc(id).delete()
     .then(() => showToast('محصول حذف شد'))
     .catch(() => showToast('حذف ناموفق بود'));
+  db.collection(COL_PRODUCT_PHOTOS).doc(id).delete().catch(() => {});
   closeModal();
 }
 
@@ -1177,7 +1233,7 @@ function submitFactory() {
 function newEntryState(template) {
   const t = template || {};
   return {
-    localId: uid(), photos: [],
+    localId: uid(), photos: [], photoThumbs: [],
     name: t.name || '', stoneType: t.stoneType || '', color: t.color || '', pattern: t.pattern || '',
     process: t.process || '', sort: t.sort || '', qadopa: t.qadopa || '',
     dimType: t.dimType || '', width: t.width || '', length: t.length || '', thickness: t.thickness || '',
@@ -1255,8 +1311,9 @@ function attachPhotoHandler(entryId) {
     if (!entry) return;
     let remaining = files.length;
     files.forEach(file => {
-      handlePhotoFile(file, (dataUrl) => {
+      handlePhotoFile(file, (dataUrl, thumbUrl) => {
         entry.photos.push(dataUrl);
+        entry.photoThumbs.push(thumbUrl);
         remaining--;
         if (remaining === 0) {
           const row = document.getElementById('photoRow_' + entryId);
@@ -1333,7 +1390,7 @@ function openProductModal(factoryId, editing) {
   productModalData = { factoryId, editing };
   if (editing) {
     productEntries = [{
-      localId: editing.id, photos: (editing.photos || []).slice(), name: editing.name, stoneType: editing.stoneType,
+      localId: editing.id, photos: (editing.photos || []).slice(), photoThumbs: (editing.photoThumbs && editing.photoThumbs.length ? editing.photoThumbs.slice() : (editing.photos || []).slice()), name: editing.name, stoneType: editing.stoneType,
       color: editing.color, pattern: editing.pattern, process: editing.processType, sort: editing.sort,
       qadopa: editing.qadopa,
       dimType: editing.dimensionType, width: editing.width, length: editing.length, thickness: editing.thickness,
@@ -1401,7 +1458,7 @@ function submitEntries() {
       checkMonths: g('p_checkMonths_' + id).trim(),
       priceValidityDays: g('p_priceValidity_' + id).trim(),
       notes: g('p_notes_' + id).trim(),
-      photos: entry.photos || []
+      photos: entry.photos || [], photoThumbs: entry.photoThumbs || []
     });
     savedCount++;
   });
@@ -1477,6 +1534,7 @@ document.addEventListener('click', (e) => {
       if (prod) {
         const photos = getProductPhotos(prod);
         if (photos.length) openLightbox(photos, idx);
+        else { pendingLightboxRequest = { productId: id, idx }; showToast('در حال بارگذاری عکس...'); }
       }
       break;
     }
@@ -1493,7 +1551,7 @@ document.addEventListener('click', (e) => {
     case 'removePhoto': {
       const entry = productEntries.find(en => en.localId === entryId);
       const idx = Number(t.getAttribute('data-idx') || 0);
-      if (entry) entry.photos.splice(idx, 1);
+      if (entry) { entry.photos.splice(idx, 1); entry.photoThumbs.splice(idx, 1); }
       const row = document.getElementById('photoRow_' + entryId);
       if (row && entry) row.outerHTML = photoRowHTML(entry);
       attachPhotoHandler(entryId);
