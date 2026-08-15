@@ -1386,11 +1386,44 @@ function syncEntriesFromDOM() {
   });
 }
 
+function generateThumbFromDataUrl(fullDataUrl, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const thumbW = 64;
+    const scale = Math.min(1, thumbW / img.width);
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    cb(c.toDataURL('image/jpeg', 0.4));
+  };
+  img.onerror = () => cb('');
+  img.src = fullDataUrl;
+}
+
+function refreshEntryPhotoRow(entryId) {
+  const row = document.getElementById('photoRow_' + entryId);
+  const entry = productEntries.find(e => e.localId === entryId);
+  if (row && entry) { row.outerHTML = photoRowHTML(entry); attachPhotoHandler(entryId); }
+}
+
+function fetchFullPhotosForEdit(product, cb) {
+  if (product.photos && product.photos.length) { cb(product.photos); return; }
+  if (product.photo) { cb([product.photo]); return; }
+  if (fullPhotosCache[product.id] && fullPhotosCache[product.id].length) { cb(fullPhotosCache[product.id]); return; }
+  db.collection(COL_PRODUCT_PHOTOS).doc(product.id).get().then((doc) => {
+    const photos = (doc.exists && doc.data().photos) ? doc.data().photos : [];
+    fullPhotosCache[product.id] = photos;
+    cb(photos);
+  }).catch(() => cb([]));
+}
+
 function openProductModal(factoryId, editing) {
   productModalData = { factoryId, editing };
   if (editing) {
     productEntries = [{
-      localId: editing.id, photos: (editing.photos || []).slice(), photoThumbs: (editing.photoThumbs && editing.photoThumbs.length ? editing.photoThumbs.slice() : (editing.photos || []).slice()), name: editing.name, stoneType: editing.stoneType,
+      localId: editing.id, photos: [], photoThumbs: [], name: editing.name, stoneType: editing.stoneType,
       color: editing.color, pattern: editing.pattern, process: editing.processType, sort: editing.sort,
       qadopa: editing.qadopa,
       dimType: editing.dimensionType, width: editing.width, length: editing.length, thickness: editing.thickness,
@@ -1399,6 +1432,23 @@ function openProductModal(factoryId, editing) {
       priceValidityDays: editing.priceValidityDays,
       unit: editing.unit, notes: editing.notes
     }];
+    renderProductEntriesModal();
+    const entry = productEntries[0];
+    fetchFullPhotosForEdit(editing, (fullPhotos) => {
+      entry.photos = fullPhotos.slice();
+      entry.photoThumbs = (editing.photoThumbs && editing.photoThumbs.length === fullPhotos.length)
+        ? editing.photoThumbs.slice()
+        : new Array(fullPhotos.length).fill('');
+      refreshEntryPhotoRow(entry.localId);
+      fullPhotos.forEach((photo, i) => {
+        if (entry.photoThumbs[i]) return;
+        generateThumbFromDataUrl(photo, (thumbUrl) => {
+          entry.photoThumbs[i] = thumbUrl || photo;
+          refreshEntryPhotoRow(entry.localId);
+        });
+      });
+    });
+    return;
   } else {
     const lastProduct = products.find(p => p.factoryId === factoryId);
     if (lastProduct) {
@@ -1458,7 +1508,7 @@ function submitEntries() {
       checkMonths: g('p_checkMonths_' + id).trim(),
       priceValidityDays: g('p_priceValidity_' + id).trim(),
       notes: g('p_notes_' + id).trim(),
-      photos: entry.photos || [], photoThumbs: entry.photoThumbs || []
+      photos: entry.photos || [], photoThumbs: (entry.photoThumbs || []).map((th, i) => th || (entry.photos || [])[i] || '')
     });
     savedCount++;
   });
