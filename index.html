@@ -1286,6 +1286,11 @@ function entryBlockHTML(entry, idx, isEdit) {
 
 function photoRowHTML(entry) {
   const id = entry.localId;
+  if (entry.photos === null) {
+    return `<div class="photo-row" id="photoRow_${id}">
+      <div style="font-size:11.5px;color:#857a69;padding:10px 0;">${entry.photosLoadError ? 'بارگذاری عکس‌های قبلی ناموفق بود — مودال را ببندید و دوباره باز کنید' : 'در حال بارگذاری عکس‌های قبلی، چند لحظه صبر کنید...'}</div>
+    </div>`;
+  }
   const photos = entry.photos || [];
   const thumbs = photos.map((photo, i) => `
     <div class="photo-thumb-item">
@@ -1309,6 +1314,7 @@ function attachPhotoHandler(entryId) {
     if (!files.length) return;
     const entry = productEntries.find(x => x.localId === entryId);
     if (!entry) return;
+    if (entry.photos === null) { showToast('صبر کن عکس‌های قبلی لود بشن'); return; }
     let remaining = files.length;
     files.forEach(file => {
       handlePhotoFile(file, (dataUrl, thumbUrl) => {
@@ -1330,13 +1336,15 @@ function renderProductEntriesModal() {
   const root = document.getElementById('modalRoot');
   root.style.display = 'block';
   const entriesHTML = productEntries.map((entry, idx) => entryBlockHTML(entry, idx, isEdit)).join('');
+  const anyLoading = productEntries.some(e => e.photos === null);
+  const readyLabel = !isEdit && productEntries.length > 1 ? 'ذخیره همه' : 'ذخیره';
   root.innerHTML = `
     <div class="modal-overlay" data-action="closeModalBg">
       <div class="modal-sheet">
         <div class="modal-head"><div class="t">${isEdit ? 'ویرایش محصول' : 'محصول جدید'}</div><button data-action="closeModal">${icon('x',18)}</button></div>
         <div id="entriesWrap">${entriesHTML}</div>
         ${!isEdit ? `<button type="button" class="toggle-link" style="margin-bottom:14px;" data-action="addEntry">${icon('plus',13)} افزودن محصول دیگر (با عکس جدید)</button>` : ''}
-        <button class="save-btn" data-action="submitEntries">${!isEdit && productEntries.length > 1 ? 'ذخیره همه' : 'ذخیره'}</button>
+        <button class="save-btn" data-action="submitEntries" data-ready-label="${readyLabel}" ${anyLoading ? 'disabled' : ''}>${anyLoading ? 'در حال بارگذاری عکس‌ها...' : readyLabel}</button>
       </div>
     </div>`;
   productEntries.forEach(entry => {
@@ -1408,22 +1416,31 @@ function refreshEntryPhotoRow(entryId) {
   if (row && entry) { row.outerHTML = photoRowHTML(entry); attachPhotoHandler(entryId); }
 }
 
+function updateSaveButtonState() {
+  const btn = document.querySelector('[data-action="submitEntries"]');
+  if (!btn) return;
+  const anyLoading = productEntries.some(e => e.photos === null);
+  btn.disabled = anyLoading;
+  btn.textContent = anyLoading ? 'در حال بارگذاری عکس‌ها...' : (btn.getAttribute('data-ready-label') || 'ذخیره');
+}
+
 function fetchFullPhotosForEdit(product, cb) {
   if (product.photos && product.photos.length) { cb(product.photos); return; }
   if (product.photo) { cb([product.photo]); return; }
   if (fullPhotosCache[product.id] && fullPhotosCache[product.id].length) { cb(fullPhotosCache[product.id]); return; }
+  if (!getProductPhotoCount(product)) { cb([]); return; }
   db.collection(COL_PRODUCT_PHOTOS).doc(product.id).get().then((doc) => {
     const photos = (doc.exists && doc.data().photos) ? doc.data().photos : [];
     fullPhotosCache[product.id] = photos;
     cb(photos);
-  }).catch(() => cb([]));
+  }).catch(() => cb(null));
 }
 
 function openProductModal(factoryId, editing) {
   productModalData = { factoryId, editing };
   if (editing) {
     productEntries = [{
-      localId: editing.id, photos: [], photoThumbs: [], name: editing.name, stoneType: editing.stoneType,
+      localId: editing.id, photos: null, photoThumbs: [], name: editing.name, stoneType: editing.stoneType,
       color: editing.color, pattern: editing.pattern, process: editing.processType, sort: editing.sort,
       qadopa: editing.qadopa,
       dimType: editing.dimensionType, width: editing.width, length: editing.length, thickness: editing.thickness,
@@ -1435,11 +1452,19 @@ function openProductModal(factoryId, editing) {
     renderProductEntriesModal();
     const entry = productEntries[0];
     fetchFullPhotosForEdit(editing, (fullPhotos) => {
+      if (fullPhotos === null) {
+        entry.photosLoadError = true;
+        refreshEntryPhotoRow(entry.localId);
+        updateSaveButtonState();
+        showToast('بارگذاری عکس‌های قبلی ناموفق بود — دوباره امتحان کنید');
+        return;
+      }
       entry.photos = fullPhotos.slice();
       entry.photoThumbs = (editing.photoThumbs && editing.photoThumbs.length === fullPhotos.length)
         ? editing.photoThumbs.slice()
         : new Array(fullPhotos.length).fill('');
       refreshEntryPhotoRow(entry.localId);
+      updateSaveButtonState();
       fullPhotos.forEach((photo, i) => {
         if (entry.photoThumbs[i]) return;
         generateThumbFromDataUrl(photo, (thumbUrl) => {
@@ -1470,6 +1495,7 @@ function openProductModal(factoryId, editing) {
 
 function submitEntries() {
   const isEdit = !!(productModalData && productModalData.editing);
+  if (productEntries.some(e => e.photos === null)) { showToast('هنوز عکس‌های قبلی در حال بارگذاری هستند، چند لحظه صبر کن'); return; }
   const g = (elId) => { const el = document.getElementById(elId); return el ? el.value : ''; };
   let savedCount = 0;
   productEntries.forEach((entry, idx) => {
