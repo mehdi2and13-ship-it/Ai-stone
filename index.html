@@ -751,6 +751,10 @@ function renderBody() {
         ${icon('chevronLeft',18,'#6f6558')}
       </button>
     `;
+    const needsOptCount = products.filter(needsPhotoMigration).length;
+    if (needsOptCount > 0) {
+      html += `<button type="button" class="toggle-link" style="margin-top:14px;justify-content:center;width:100%;" data-action="runBulkOptimize">${icon('history',13)} بهینه‌سازی سرعت (${needsOptCount} محصول باقی‌مانده)</button>`;
+    }
     el.innerHTML = html;
     document.getElementById('homeSearchInput').addEventListener('focus', () => { view = 'search'; render(); });
   }
@@ -1436,6 +1440,69 @@ function fetchFullPhotosForEdit(product, cb) {
   }).catch(() => cb(null));
 }
 
+function needsPhotoMigration(p) {
+  const count = getProductPhotoCount(p);
+  if (!count) return false;
+  const hasProperThumbs = p.photoThumbs && p.photoThumbs.length === count;
+  const stillInline = p.photos && p.photos.length;
+  return !hasProperThumbs || stillInline;
+}
+
+function migrateOneProduct(p) {
+  return new Promise((resolve) => {
+    fetchFullPhotosForEdit(p, (fullPhotos) => {
+      if (!fullPhotos || !fullPhotos.length) { resolve(); return; }
+      let remaining = fullPhotos.length;
+      const thumbs = new Array(fullPhotos.length).fill('');
+      fullPhotos.forEach((photo, i) => {
+        generateThumbFromDataUrl(photo, (thumbUrl) => {
+          thumbs[i] = thumbUrl || photo;
+          remaining--;
+          if (remaining === 0) {
+            db.collection(COL_PRODUCTS).doc(p.id).update({ photoThumbs: thumbs, photoCount: fullPhotos.length })
+              .then(() => {
+                if (p.photos && p.photos.length) {
+                  db.collection(COL_PRODUCT_PHOTOS).doc(p.id).set({ photos: fullPhotos }).then(() => {
+                    db.collection(COL_PRODUCTS).doc(p.id).update({ photos: firebase.firestore.FieldValue.delete() }).then(resolve).catch(resolve);
+                  }).catch(resolve);
+                } else {
+                  resolve();
+                }
+              })
+              .catch(resolve);
+          }
+        });
+      });
+    });
+  });
+}
+
+let bulkOptimizeRunning = false;
+async function runBulkPhotoOptimization() {
+  if (bulkOptimizeRunning) return;
+  const toProcess = products.filter(needsPhotoMigration);
+  if (!toProcess.length) { showToast('همهٔ محصولات از قبل بهینه‌ان'); return; }
+  bulkOptimizeRunning = true;
+  showToast(`شروع بهینه‌سازی ${toProcess.length} محصول...`);
+  let done = 0;
+  for (const p of toProcess) {
+    await migrateOneProduct(p);
+    done++;
+    if (done % 3 === 0 || done === toProcess.length) showToast(`بهینه‌سازی: ${done} از ${toProcess.length}`);
+  }
+  bulkOptimizeRunning = false;
+  showToast('بهینه‌سازی همهٔ محصولات تمام شد!');
+}
+
+function confirmBulkOptimize() {
+  if (bulkOptimizeRunning) { showToast('بهینه‌سازی در حال اجراست...'); return; }
+  const count = products.filter(needsPhotoMigration).length;
+  if (!count) { showToast('همهٔ محصولات از قبل بهینه‌ان'); return; }
+  if (confirm(`${count} محصول نیاز به بهینه‌سازی دارن. این کار ممکنه چند دقیقه طول بکشه و باید صفحه باز بمونه. ادامه بدم؟`)) {
+    runBulkPhotoOptimization();
+  }
+}
+
 function openProductModal(factoryId, editing) {
   productModalData = { factoryId, editing };
   if (editing) {
@@ -1665,6 +1732,7 @@ document.addEventListener('click', (e) => {
     case 'togglePriceFilter': showPriceFilter = !showPriceFilter; renderBody(); break;
     case 'toggleAttrFilter': showAttrFilter = !showAttrFilter; renderBody(); break;
     case 'toggleFactoryMode': searchModeFactory = !searchModeFactory; renderBody(); break;
+    case 'runBulkOptimize': confirmBulkOptimize(); break;
     case 'selectChip': {
       const field = t.getAttribute('data-field');
       const value = t.getAttribute('data-value');
