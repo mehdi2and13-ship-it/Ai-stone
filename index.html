@@ -589,14 +589,14 @@ function handlePhotoFile(file, cb) {
   reader.onload = (ev) => {
     const img = new Image();
     img.onload = () => {
-      const maxW = 480;
+      const maxW = 800;
       const scale = Math.min(1, maxW / img.width);
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
       const thumbW = 64;
       const thumbScale = Math.min(1, thumbW / img.width);
